@@ -177,7 +177,7 @@ public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object
 		if (localFiles != null) {
 		  for (int i = 0; i < localFiles.length; i++) {
 			  String strFileName = localFiles[i].toString();
-			  if (strFileName.contains(conf.get(SenseiJobConfig.SCHEMA_FILE_URL))) {
+			  if (strFileName.contains(metadataFileName.substring(metadataFileName.lastIndexOf("/") + 1))) {
 				  metadataFileName = strFileName;
 				  break;
 			  }
@@ -185,6 +185,7 @@ public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object
 		}
 		
 		if (metadataFileName != null && metadataFileName.length() > 0) {
+		    logger.info("MetadataFileName is {}" + metadataFileName);
 			_schema_uri = "file:///" + metadataFileName;
 
 			if (_defaultInterpreter == null) {
