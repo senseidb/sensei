@@ -11,6 +11,7 @@ class RabbitMQConfig {
     private ConnectionConfig _connectionConfig;
     private ExchangeConfig _exchangeConfig;
     private QueueConfig _queueConfig;
+    private int _consumeWorkerCount = 5;
 
     RabbitMQConfig(ConnectionConfig connectionConfig, ExchangeConfig exchangeConfig, QueueConfig queueConfig) {
         this._connectionConfig = connectionConfig;
@@ -30,6 +31,14 @@ class RabbitMQConfig {
         return _queueConfig;
     }
 
+    int getConsumeWorkerCount(){
+        return _consumeWorkerCount;
+    }
+    
+    void setConsumeWorkerCount(int consumeWorkerCount){
+        _consumeWorkerCount = consumeWorkerCount;
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("ConnectionConfig : " + _connectionConfig.toString() + ", ");

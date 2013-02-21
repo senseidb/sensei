@@ -44,8 +44,10 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
     private static final String RABBIT_MQ_QUEUE_DURABLE = ".queue.durable";
     private static final String RABBIT_MQ_QUEUE_EXCLUSIVE = ".queue.exclusive";
     private static final String RABBIT_MQ_QUEUE_AUTO_DELETE = ".queue.auto.delete";
+    private static final String RABBIT_MQ_CONSUMER_COUNT = ".consumer.count";
     
-    private static final String MAX_PARTITION_ID = "sensei.index.manager.default.maxpartition.id";
+    private static final String MAX_PARTITION_ID = "maxpartition.id";
+    
     
     /**
      * example:
@@ -61,6 +63,7 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
      * sensei.gateway.server1.queue.durable=true
      * sensei.gateway.server1.queue.exclusive=false
      * sensei.gateway.server1.queue.auto.delete=false
+     * sensei.gateway.server1.consumer.count=5
      * sensei.gateway.server2.host=192.168.1.11
      * sensei.gateway.server2.exchange.name=userInfoUpdate_in_exchange
      * sensei.gateway.server2.exchange.type=direct
@@ -70,6 +73,7 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
      * sensei.gateway.server2.queue.durable=true
      * sensei.gateway.server2.queue.exclusive=false
      * sensei.gateway.server2.queue.auto.delete=false
+     * sensei.gateway.server2.consumer.count=5
      */
     private void initRabbitMQConfigs() {
         _logger.info("Start construct RabbitMQ servers configurations.");
@@ -124,6 +128,12 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
 
             _mqConfigs[i] = new RabbitMQConfig(connectionConfig, exchangeConfig, queueConfig);
 
+            try {
+                _mqConfigs[i].setConsumeWorkerCount(Integer.parseInt(config.get(rabbitmqServer + RABBIT_MQ_CONSUMER_COUNT)));
+            } catch (NumberFormatException e) {
+                // do nothing
+            }
+
             _logger.info("Successfully construct RabbitMQ server : {}", _mqConfigs[i]);
         }
         _logger.info("Successfully construct RabbitMQ servers configurations.");
@@ -139,7 +149,8 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
         ShardingStrategy shardingStrategy, Set<Integer> partitions) throws Exception {
         initRabbitMQConfigs();
         int maxPartitionId = Integer.parseInt(config.get(MAX_PARTITION_ID));
-        return new RabbitMQStreamDataProvider(DEFAULT_VERSION_COMPARATOR, _mqConfigs, maxPartitionId, dataFilter, Oldsincekey, shardingStrategy, partitions);
+        return new RabbitMQStreamDataProvider(DEFAULT_VERSION_COMPARATOR, _mqConfigs, maxPartitionId, dataFilter, Oldsincekey,
+                shardingStrategy, partitions);
     }
 
 }
