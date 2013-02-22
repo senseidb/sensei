@@ -182,13 +182,17 @@
 					<groupId>fastutil</groupId>
 					<artifactId>fastutil</artifactId>
 				</exclusion>
+				<exclusion>
+					<groupId>it.unimi.dsi</groupId>
+					<artifactId>fastutil</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
 		<dependency>
-			<groupId>it.unimi.dsi</groupId>
+			<groupId>fastutil</groupId>
 			<artifactId>fastutil</artifactId>
-			<version>6.4.3</version>
+			<version>5.0.5</version>
 			<type>jar</type>
 		</dependency>
 
@@ -233,8 +237,7 @@
 		<dependency>
 			<groupId>com.browseengine.bobo</groupId>
 			<artifactId>bobo-browse</artifactId>
-			<version>3.1.1-SNAPSHOT</version>
-
+			<version>3.1.2-SNAPSHOT</version>
 			<exclusions>
 				<exclusion>
 					<groupId>fastutil</groupId>
@@ -253,6 +256,12 @@
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
 			<version>20080701</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>fastjson</artifactId>
+			<version>1.1.24</version>
 		</dependency>
 
 		<dependency>

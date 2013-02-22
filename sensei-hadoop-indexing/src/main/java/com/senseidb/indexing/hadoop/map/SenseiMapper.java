@@ -22,12 +22,12 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.util.Version;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 
 import proj.zoie.api.ZoieSegmentReader;
 import proj.zoie.api.indexing.AbstractZoieIndexable;
@@ -37,7 +37,6 @@ import proj.zoie.api.indexing.ZoieIndexable.IndexingReq;
 import com.senseidb.conf.SchemaConverter;
 import com.senseidb.conf.SenseiSchema;
 import com.senseidb.indexing.DefaultJsonSchemaInterpreter;
-import com.senseidb.indexing.JsonFilter;
 import com.senseidb.indexing.ShardingStrategy;
 import com.senseidb.indexing.hadoop.keyvalueformat.IntermediateForm;
 import com.senseidb.indexing.hadoop.keyvalueformat.Shard;
@@ -47,7 +46,6 @@ public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object
 
 	private final static Logger logger = Logger.getLogger(SenseiMapper.class);
 	private static DefaultJsonSchemaInterpreter _defaultInterpreter = null;
-	private boolean _use_remote_schema = false;
 	private volatile boolean _isConfigured = false;
 	private Configuration _conf;
 	private Shard[] _shards;
@@ -170,20 +168,20 @@ public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object
 
 	private void setSchema(JobConf conf) throws Exception {
 
-		String _schema_uri = null;
-		String metadataFileName = conf.get(SenseiJobConfig.SCHEMA_FILE_URL);
-		
-		Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
-		if (localFiles != null) {
-		  for (int i = 0; i < localFiles.length; i++) {
-			  String strFileName = localFiles[i].toString();
-			  if (strFileName.contains(metadataFileName.substring(metadataFileName.lastIndexOf("/") + 1))) {
-				  metadataFileName = strFileName;
-				  break;
-			  }
-		  }
-		}
-		
+    String _schema_uri = null;
+    String metadataFileName = conf.get(SenseiJobConfig.SCHEMA_FILE_URL);
+
+    Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+    if (localFiles != null) {
+      String metadataFileBaseName = new Path(metadataFileName).getName();
+      for (int i = 0; i < localFiles.length; i++) {
+        if (localFiles[i].getName().equals(metadataFileBaseName)) {
+          metadataFileName = localFiles[i].toString();
+          break;
+        }
+      }
+    }
+
 		if (metadataFileName != null && metadataFileName.length() > 0) {
 		    logger.info("MetadataFileName is {}" + metadataFileName);
 			_schema_uri = "file:///" + metadataFileName;

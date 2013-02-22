@@ -60,6 +60,7 @@ public class SenseiSchema {
     public String delim = ",";
     public Store store;
     public Class type = null;
+		public String name;
   }
 
   public static class FacetDefinition {
@@ -178,7 +179,7 @@ public class SenseiSchema {
               
               fdef.isMulti = column.optBoolean("multi");
               fdef.isActivity = column.optBoolean("activity");
-              
+              fdef.name = n;
               String delimString = column.optString("delimiter");
               if (delimString!=null && delimString.trim().length()>0){
                   fdef.delim = delimString;

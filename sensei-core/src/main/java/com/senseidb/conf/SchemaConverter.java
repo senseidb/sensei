@@ -14,6 +14,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import com.senseidb.util.JSONUtil.FastJSONArray;
+import com.senseidb.util.JSONUtil.FastJSONObject;
+
 public class SchemaConverter
 {
   private static Logger logger = Logger.getLogger(SchemaConverter.class);
@@ -21,8 +24,8 @@ public class SchemaConverter
   static public JSONObject convert(Document schemaDoc)
       throws ConfigurationException, JSONException
   {
-    JSONObject jsonObj = new JSONObject();
-    JSONObject tableObj = new JSONObject();
+    JSONObject jsonObj = new FastJSONObject();
+    JSONObject tableObj = new FastJSONObject();
     jsonObj.put("table", tableObj);
 
     NodeList tables = schemaDoc.getElementsByTagName("table");
@@ -53,7 +56,7 @@ public class SchemaConverter
         tableObj.put("compress-src-data", true);
 
       NodeList columns = tableElem.getElementsByTagName("column");
-      JSONArray columnArray = new JSONArray();
+      JSONArray columnArray = new FastJSONArray();
       tableObj.put("columns", columnArray);
 
       for (int i = 0; i < columns.getLength(); ++i)
@@ -61,7 +64,7 @@ public class SchemaConverter
         try
         {
           Element column = (Element) columns.item(i);
-          JSONObject columnObj = new JSONObject();
+          JSONObject columnObj = new FastJSONObject();
           columnArray.put(columnObj);
 
           String n = column.getAttribute("name");
@@ -117,7 +120,7 @@ public class SchemaConverter
 
 
     NodeList facets = schemaDoc.getElementsByTagName("facet");
-    JSONArray facetArray = new JSONArray();
+    JSONArray facetArray = new FastJSONArray();
     jsonObj.put("facets", facetArray);
 
     for (int i = 0; i < facets.getLength(); ++i)
@@ -125,7 +128,7 @@ public class SchemaConverter
       try
       {
         Element facet = (Element) facets.item(i);
-        JSONObject facetObj = new JSONObject();
+        JSONObject facetObj = new FastJSONObject();
         facetArray.put(facetObj);
 
         facetObj.put("name", facet.getAttribute("name"));
@@ -133,7 +136,7 @@ public class SchemaConverter
         String depends = facet.getAttribute("depends");
         if (depends != null && depends.length() > 0){
           String[] dependsList = depends.split(",");
-          JSONArray dependsArr = new JSONArray();
+          JSONArray dependsArr = new FastJSONArray();
           for (String dependName : dependsList)
           {
             if (dependName != null)
@@ -156,13 +159,13 @@ public class SchemaConverter
 
         NodeList paramList = facet.getElementsByTagName("param");
         if (paramList!=null){
-          JSONArray params = new JSONArray();
+          JSONArray params = new FastJSONArray();
           facetObj.put("params", params);
           for (int j = 0; j < paramList.getLength(); ++j) {
             Element param = (Element) paramList.item(j);
             String paramName = param.getAttribute("name");
             String paramValue = param.getAttribute("value");
-            JSONObject paramObj = new JSONObject();
+            JSONObject paramObj = new FastJSONObject();
             paramObj.put("name", paramName);
             paramObj.put("value", paramValue);
             params.put(paramObj);

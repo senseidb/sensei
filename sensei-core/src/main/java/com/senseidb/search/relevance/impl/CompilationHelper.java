@@ -28,12 +28,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.senseidb.search.relevance.ExternalRelevanceDataStorage;
 import com.senseidb.search.req.ErrorType;
 
 import javassist.CannotCompileException;
 import javassist.ClassClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.CtField;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
@@ -52,7 +54,8 @@ import javassist.NotFoundException;
               "map_int_float":["j"], // supported hashmap: [map_int_float, map_int_double, map_int_*...]
                                      //                    [map_string_int, map_string_float, map_string_*]
               "int":["e","f"],       // supported normal variables: [int, double, float, long, bool, string]
-              "long":["g","h"]
+              "long":["g","h"],
+              "custom_obj":["krati","big_cache"]   // supported external static big in-memory object (initialized when senseidb starts)
           },
 
           "facets": {
@@ -259,8 +262,9 @@ public class CompilationHelper
     /* 29 */ "  com.senseidb.search.relevance.impl.WeightedMFacetLong %s = (com.senseidb.search.relevance.impl.WeightedMFacetLong) mFacetLongs[%d];",
     /* 30 */ "  com.senseidb.search.relevance.impl.WeightedMFacetDouble %s = (com.senseidb.search.relevance.impl.WeightedMFacetDouble) mFacetDoubles[%d];",
     /* 31 */ "  com.senseidb.search.relevance.impl.WeightedMFacetFloat %s = (com.senseidb.search.relevance.impl.WeightedMFacetFloat) mFacetFloats[%d];",
-    /* 32 */ "  com.senseidb.search.relevance.impl.WeightedMFacetString %s = (com.senseidb.search.relevance.impl.WeightedMFacetShort) mFacetStrings[%d];",
-    /* 33 */ "  com.senseidb.search.relevance.impl.WeightedMFacetShort %s = (com.senseidb.search.relevance.impl.WeightedMFacetString) mFacetShorts[%d];"
+    /* 32 */ "  com.senseidb.search.relevance.impl.WeightedMFacetString %s = (com.senseidb.search.relevance.impl.WeightedMFacetString) mFacetStrings[%d];",
+    /* 33 */ "  com.senseidb.search.relevance.impl.WeightedMFacetShort %s = (com.senseidb.search.relevance.impl.WeightedMFacetShort) mFacetShorts[%d];",
+    /* 34 */ "  %s %s = (%s) objs[%d];"
   };
 
   // Map of parameter types to int arrays.  For each parameter type, the
@@ -269,7 +273,7 @@ public class CompilationHelper
   // the index of input data array for that parameter.
   private static Map<Integer, int[]> PARAM_INIT_MAP = new HashMap<Integer, int[]>();
 
-  private static int TOTAL_INPUT_DATA_ARRAYS = 15;
+  private static int TOTAL_INPUT_DATA_ARRAYS = 16;
 
   private static String EXP_INT_METHOD    = "public double exp(int val) { return Double.longBitsToDouble(((long) (1512775 * val + 1072632447)) << 32); }";
   private static String EXP_DOUBLE_METHOD = "public double exp(double val) { return Double.longBitsToDouble(((long) (1512775 * val + 1072632447)) << 32); }";
@@ -290,7 +294,8 @@ public class CompilationHelper
     "com.senseidb.search.relevance.impl.MFacetFloat[] mFacetFloats, " +
     "com.senseidb.search.relevance.impl.MFacetDouble[] mFacetDoubles, " +
     "com.senseidb.search.relevance.impl.MFacetShort[] mFacetShorts, " +
-    "com.senseidb.search.relevance.impl.MFacetString[] mFacetStrings)";
+    "com.senseidb.search.relevance.impl.MFacetString[] mFacetStrings, " +
+    "java.lang.Object[] objs)";
 
   static
   {
@@ -315,6 +320,8 @@ public class CompilationHelper
     hs_safe.add("it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap");
 
     hs_safe.add("it.unimi.dsi.fastutil.objects.AbstractObject2FloatMap");
+    hs_safe.add("it.unimi.dsi.fastutil.objects.AbstractObject2FloatFunction");
+
 
     hs_safe.add("com.senseidb.search.relevance.impl.MFacet");
     hs_safe.add("com.senseidb.search.relevance.impl.MFacetDouble");
@@ -331,6 +338,8 @@ public class CompilationHelper
     hs_safe.add("com.senseidb.search.relevance.impl.WeightedMFacetLong");
     hs_safe.add("com.senseidb.search.relevance.impl.WeightedMFacetShort");
     hs_safe.add("com.senseidb.search.relevance.impl.WeightedMFacetString");
+    
+    hs_safe.add("java.util.Random");
 
     pool.importPackage("java.util");
     for (String cls: hs_safe)
@@ -366,13 +375,14 @@ public class CompilationHelper
     //  0  int_index        6  m_int_index       12  boolean_index
     //  1  long_index       7  m_long_index      13  set_index
     //  2  double_index     8  m_double_index    14  map_index
-    //  3  float_index      9  m_float_index
+    //  3  float_index      9  m_float_index     15  obj_index
     //  4  string_index    10  m_string_index
     //  5  short_index     11  m_short_index
 
     // the first int in the following int[] is the index of the string template above (PARAM_FORMAT_STRINGS);
     // the second int in the int[] below is the index of the function parameters;
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_INNER_SCORE,       new int[]{ 3,  3});
+    PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_NOW,               new int[]{ 1,  1});
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_INT,               new int[]{ 0,  0});
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_LONG,              new int[]{ 1,  1});
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_DOUBLE,            new int[]{ 2,  2});
@@ -412,7 +422,8 @@ public class CompilationHelper
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_FACET_WM_FLOAT,    new int[]{31,  9});
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_FACET_WM_STRING,   new int[]{32, 10});
     PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_FACET_WM_SHORT,    new int[]{33, 11});
-    PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_FACET_A_INT,       new int[]{0, 0});
+    PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_FACET_A_INT,       new int[]{0,   0});
+    PARAM_INIT_MAP.put(RelevanceJSONConstants.TYPENUMBER_CUSTOM_OBJ,        new int[]{34, 15});
   }
 
   private static int MAX_NUM_MODELS  = 10000;
@@ -446,7 +457,13 @@ public class CompilationHelper
     {
       String facetType = it_facet.next();
       JSONArray facetArray = jsonFacets.getJSONArray(facetType);
-      handleFacetSymbols(facetType, facetArray, facetIndice, dataTable);
+
+     try {
+         handleFacetSymbols(facetType, facetArray, facetIndice, dataTable);
+     } catch (JSONException e) {
+         logger.error("JSON facets are " + jsonFacets);
+         throw e;
+     }
     }
 
     // Process other variables
@@ -459,7 +476,8 @@ public class CompilationHelper
       {
         String symbol = varArray.getString(i);
         if (symbol.equals(RelevanceJSONConstants.KW_INNER_SCORE) ||
-            symbol.equals(RelevanceJSONConstants.KW_NOW))
+            symbol.equals(RelevanceJSONConstants.KW_NOW) ||
+            symbol.equals(RelevanceJSONConstants.KW_RANDOM))
         {
           throw new RelevanceException(ErrorType.JsonParsingError, "Internal variable name, " + symbol + ", is reserved.");
         }
@@ -546,7 +564,8 @@ public class CompilationHelper
         ch.addInterface(ci);
         String functionString = makeFuncString(dataTable);
 
-        addFacilityMethods(ch);
+        addStaticFacilityFields(ch);
+        addStaticFacilityMethods(ch);
 
         CtMethod m;
         try
@@ -557,7 +576,7 @@ public class CompilationHelper
         catch (CannotCompileException e)
         {
           logger.info(e.getMessage());
-          throw new RelevanceException(ErrorType.JsonCompilationError, "Compilation error of json relevance model.", e);
+          throw new RelevanceException(ErrorType.JsonCompilationError, e.getMessage(), e);
         }
 
         Class h;
@@ -615,7 +634,7 @@ public class CompilationHelper
       Integer typeNum = dataTable.hm_type.get(symbol);
 
       if (typeNum == RelevanceJSONConstants.TYPENUMBER_INNER_SCORE ||
-          typeNum == RelevanceJSONConstants.TYPENUMBER_NOW)
+          typeNum == RelevanceJSONConstants.TYPENUMBER_NOW )
         continue;
 
       if (typeNum >= RelevanceJSONConstants.TYPENUMBER_SET_INT &&
@@ -674,7 +693,7 @@ public class CompilationHelper
           throw new JSONException("Variable "+ symbol + " does not have value.");
 
         JSONArray keysList = values.names();
-        int keySize = keysList.length();
+        int keySize = keysList == null ? 0 : keysList.length();
         
         // denote if the map is represented in a way of combination of key jsonarray and value jsonarray;
         boolean isKeyValue = isKeyValueArrayMethod(values);
@@ -848,9 +867,17 @@ public class CompilationHelper
           break;
         }
       }
+      else if (typeNum == RelevanceJSONConstants.TYPENUMBER_CUSTOM_OBJ)
+      {
+        Object obj = ExternalRelevanceDataStorage.getObj(symbol); 
+        if(obj != null)
+          dataTable.hm_var.put(symbol, obj);
+        else
+          throw new JSONException("function parameter: " + symbol + " can not be initialized as a custom Object.");
+      }
     }
 
-    // Check if all the parameters have initialized
+    // Check if all the parameters have been initialized
     for(int i=0; i< dataTable.lls_params.size(); i++)
     {
       String symbol = dataTable.lls_params.get(i);
@@ -883,7 +910,23 @@ public class CompilationHelper
     return false;
   }
 
-  private static void addFacilityMethods(CtClass ch) throws JSONException
+  private static void addStaticFacilityFields(CtClass ch) throws JSONException
+  {
+    // add a random field in the object;
+    CtField f;
+    try
+    {
+      f = CtField.make("public static java.util.Random _RANDOM = new java.util.Random();", ch);
+      ch.addField(f);
+    }
+    catch (CannotCompileException e)
+    {
+      logger.info(e.getMessage());
+      throw new JSONException(e);
+    }
+  }
+  
+  private static void addStaticFacilityMethods(CtClass ch) throws JSONException
   {
     addMethod(EXP_INT_METHOD, ch);
     addMethod(EXP_DOUBLE_METHOD, ch);
@@ -929,6 +972,36 @@ public class CompilationHelper
     return lls_new;
   }
 
+  private static <T, V> String mkString(Map<T, V> map) {
+    StringBuffer sb = new StringBuffer().append("{");
+
+    int count = 0;
+    for(Map.Entry<T, V> entry : map.entrySet())
+    {
+      if(count++ != 0)
+          sb.append(", ");
+
+      sb.append(entry.getKey()).append(": ").append(entry.getValue());
+    }
+
+    return sb.append("}").toString();
+  }
+
+    private static <T> String mkString(Set<T> set) {
+        StringBuffer sb = new StringBuffer().append("[");
+
+        int count = 0;
+        for(T elem : set)
+        {
+            if(count++ != 0)
+                sb.append(", ");
+
+            sb.append(elem);
+        }
+
+        return sb.append("]").toString();
+    }
+
   private static void handleFacetSymbols(String facetType,
                                          JSONArray facetArray,
                                          int[] facetIndice,
@@ -938,7 +1011,11 @@ public class CompilationHelper
     Integer[] facetInfo = RelevanceJSONConstants.FACET_INFO_MAP.get(facetType);
     if (facetInfo == null)
     {
-      throw new JSONException("Wrong facet type in facet variable definition json: " + facetType);
+       String errorString = String.format("Wrong facet type in facet variable definition json: %s. Map contents are %s. Facet array is %s.",
+         facetType, mkString(RelevanceJSONConstants.FACET_INFO_MAP), facetArray);
+
+
+       throw new JSONException(errorString);
     }
 
     Integer type = facetInfo[0];
@@ -1002,7 +1079,21 @@ public class CompilationHelper
 
       Integer paramType = dataTable.hm_type.get(paramName);
       int[] paramInfo = PARAM_INIT_MAP.get(paramType);
-      sb.append(String.format(PARAM_FORMAT_STRINGS[paramInfo[0]], paramName, paramIndices[paramInfo[1]]++));
+      if(paramType.intValue() == RelevanceJSONConstants.TYPENUMBER_CUSTOM_OBJ)
+      {
+        String className = ExternalRelevanceDataStorage.getObjClsName(paramName);
+        if(className == null)
+          throw new JSONException("Custom external object " + paramName + " is not found.");
+        
+        String className2 = className.replace('$', '.');
+        
+        hs_safe.add(className);
+        pool.importPackage(className);
+        
+        sb.append(String.format(PARAM_FORMAT_STRINGS[paramInfo[0]], className2, paramName, className2, paramIndices[paramInfo[1]]++));
+      }
+      else
+        sb.append(String.format(PARAM_FORMAT_STRINGS[paramInfo[0]], paramName, paramIndices[paramInfo[1]]++));
       if (paramType == RelevanceJSONConstants.TYPENUMBER_INNER_SCORE)
       {
         dataTable.useInnerScore = true;
@@ -1024,8 +1115,10 @@ public class CompilationHelper
 
       if(hs_safe.contains(name) || name.equals(_target))
         return _cl.loadClass(name);
-      else
-        throw new ClassNotFoundException();
+      else {
+        String message = String.format("Unable to load class %s. Safe classes are %s", name, mkString(hs_safe));
+        throw new ClassNotFoundException(message);
+      }
     }
 
     public CustomLoader(ClassLoader cl, String target) {

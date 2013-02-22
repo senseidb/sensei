@@ -7,11 +7,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.browseengine.bobo.facets.data.TermValueList;
+import com.browseengine.bobo.util.BigSegmentedArray;
+
+import com.senseidb.util.JSONUtil.FastJSONArray;
+import com.senseidb.util.JSONUtil.FastJSONObject;
 
 public class FacetCountsMapReduce implements SenseiMapReduce<HashMap<String, IntContainer>, ArrayList<GroupedValue>> {
   private static final long serialVersionUID = 1L;  
@@ -28,11 +31,11 @@ public class FacetCountsMapReduce implements SenseiMapReduce<HashMap<String, Int
     if (!facetCountAccessor.areFacetCountsPresent()) {
       return null;
     }
-    int[] countDistribution = facetCountAccessor.getFacetCollector(column).getCountDistribution();
+    BigSegmentedArray countDistribution = facetCountAccessor.getFacetCollector(column).getCountDistribution();
     TermValueList termValueList = accessor.getTermValueList(column);
-    HashMap<String, IntContainer> ret = new HashMap<String, IntContainer>(countDistribution.length);
-    for (int i = 0; i < countDistribution.length; i++) {
-      ret.put(termValueList.get(i), new IntContainer(countDistribution[i]));
+    HashMap<String, IntContainer> ret = new HashMap<String, IntContainer>(countDistribution.size());
+    for (int i = 0; i < countDistribution.size(); i++) {
+      ret.put(termValueList.get(i), new IntContainer(countDistribution.get(i)));
     }
     return ret;
   }
@@ -93,11 +96,11 @@ public class FacetCountsMapReduce implements SenseiMapReduce<HashMap<String, Int
 
   public JSONObject render(ArrayList<GroupedValue> reduceResult) {
     try {
-      JSONObject ret = new JSONObject();
+      JSONObject ret = new FastJSONObject();
       for (GroupedValue grouped : reduceResult) {
         ret.put(grouped.key, grouped.value);
       }
-      return new JSONObject().put("facetCounts", ret);
+      return new FastJSONObject().put("facetCounts", ret);
     } catch (JSONException ex) {
       throw new RuntimeException(ex);
     }

@@ -87,6 +87,8 @@ import com.senseidb.search.plugin.PluggableSearchEngineManager;
 import com.senseidb.search.query.RetentionFilterFactory;
 import com.senseidb.search.query.TimeRetentionFilter;
 import com.senseidb.search.relevance.CustomRelevanceFunction.CustomRelevanceFunctionFactory;
+import com.senseidb.search.relevance.ExternalRelevanceDataStorage;
+import com.senseidb.search.relevance.ExternalRelevanceDataStorage.RelevanceObjPlugin;
 import com.senseidb.search.relevance.ModelStorage;
 import com.senseidb.search.req.AbstractSenseiRequest;
 import com.senseidb.search.req.AbstractSenseiResult;
@@ -97,6 +99,9 @@ import com.senseidb.servlet.SenseiHttpInvokerServiceServlet;
 import com.senseidb.svc.impl.AbstractSenseiCoreService;
 import com.senseidb.util.HDFSIndexCopier;
 import com.senseidb.util.NetUtil;
+import com.senseidb.util.SenseiUncaughtExceptionHandler;
+import com.senseidb.util.JSONUtil.FastJSONArray;
+import com.senseidb.util.JSONUtil.FastJSONObject;
 
 public class SenseiServerBuilder implements SenseiConfParams{
 
@@ -116,6 +121,7 @@ public class SenseiServerBuilder implements SenseiConfParams{
   private final SenseiSchema  _senseiSchema;
   private final SenseiGateway _gateway;
   private PluggableSearchEngineManager pluggableSearchEngineManager;
+  private SenseiIndexReaderDecorator decorator;
 
   static final String SENSEI_CONTEXT_PATH = "sensei";
 
@@ -205,7 +211,7 @@ public class SenseiServerBuilder implements SenseiConfParams{
     //senseiApp.setInitParams(initParam);
     senseiApp.setAttribute("sensei.search.configuration", _senseiConf);
     senseiApp.setAttribute(SenseiConfigServletContextListener.SENSEI_CONF_PLUGIN_REGISTRY, pluginRegistry);
-    senseiApp.setAttribute("sensei.search.version.comparator", _gateway.getVersionComparator());
+    senseiApp.setAttribute("sensei.search.version.comparator", _gateway != null ? _gateway.getVersionComparator() : ZoieConfig.DEFAULT_VERSION_COMPARATOR);
 
     PartitionedLoadBalancerFactory<String> routerFactory = pluginRegistry.getBeanByFullPrefix(SenseiConfParams.SERVER_SEARCH_ROUTER_FACTORY, PartitionedLoadBalancerFactory.class);
     if (routerFactory == null) {
@@ -231,7 +237,7 @@ public class SenseiServerBuilder implements SenseiConfParams{
       InputStream is = new FileInputStream(jsonSchema);
       String json = IOUtils.toString( is );
       is.close();
-      return new JSONObject(json);
+      return new FastJSONObject(json);
     }
     else{
       File xmlSchema = new File(confDir,SCHEMA_FILE_XML);
@@ -252,7 +258,7 @@ public class SenseiServerBuilder implements SenseiConfParams{
   {
     if (confDir.createRelative(SCHEMA_FILE_JSON).exists()){
       String json = IOUtils.toString(confDir.createRelative(SCHEMA_FILE_JSON).getInputStream());
-      return new JSONObject(json);
+      return new FastJSONObject(json);
     }
     else{
       if (confDir.createRelative(SCHEMA_FILE_XML).exists()){
@@ -293,9 +299,9 @@ public class SenseiServerBuilder implements SenseiConfParams{
     pluginRegistry.start();
     
     processRelevanceFunctionPlugins(pluginRegistry);
+    processRelevanceExternalObjectPlugins(pluginRegistry);
 
     _gateway = pluginRegistry.getBeanByFullPrefix(SENSEI_GATEWAY, SenseiGateway.class);
-
     _schemaDoc = loadSchema(confDir);
     _senseiSchema = SenseiSchema.build(_schemaDoc);
   }
@@ -329,7 +335,14 @@ public class SenseiServerBuilder implements SenseiConfParams{
       CustomRelevanceFunctionFactory crf = map.get(name);
       ModelStorage.injectPreloadedModel(name, crf);
     }
-    
+  }
+  
+
+  private void processRelevanceExternalObjectPlugins(SenseiPluginRegistry pluginRegistry)
+  {
+    List<RelevanceObjPlugin> relObjPlugins = pluginRegistry.getBeansByType(RelevanceObjPlugin.class);
+    for(RelevanceObjPlugin rop : relObjPlugins)
+      ExternalRelevanceDataStorage.putObj(rop);
   }
   
   static final Pattern PARTITION_PATTERN = Pattern.compile("[\\d]+||[\\d]+-[\\d]+");
@@ -369,8 +382,9 @@ public class SenseiServerBuilder implements SenseiConfParams{
     Arrays.sort(ret);
     return ret;
   }
-
+  
   public SenseiCore buildCore() throws ConfigurationException {
+    SenseiUncaughtExceptionHandler.setAsDefaultForAllThreads();
     int nodeid = _senseiConf.getInt(NODE_ID);
     String partStr = _senseiConf.getString(PARTITIONS);
     String[] partitionArray = partStr.split("[,\\s]+");
@@ -478,7 +492,7 @@ public class SenseiServerBuilder implements SenseiConfParams{
         QueryParser queryParser = new QueryParser(Version.LUCENE_35,"contents", analyzer);
         queryBuilderFactory = new DefaultJsonQueryBuilderFactory(queryParser);
       }
-      SenseiCore senseiCore = new SenseiCore(nodeid,partitions,zoieSystemFactory,indexingManager,queryBuilderFactory);
+      SenseiCore senseiCore = new SenseiCore(nodeid,partitions,zoieSystemFactory,indexingManager,queryBuilderFactory, decorator);
       senseiCore.setSystemInfo(sysInfo);
     SenseiIndexPruner indexPruner = pluginRegistry.getBeanByFullPrefix(SENSEI_INDEX_PRUNER, SenseiIndexPruner.class);
     if (indexPruner != null){
@@ -495,7 +509,7 @@ public class SenseiServerBuilder implements SenseiConfParams{
                                                     List<RuntimeFacetHandlerFactory<?, ?>> runtimeFacetHandlerFactories, ZoieIndexableInterpreter interpreter)
       throws ConfigurationException {
     String indexerType = _senseiConf.getString(SENSEI_INDEXER_TYPE,"zoie");
-    SenseiIndexReaderDecorator decorator = new SenseiIndexReaderDecorator(facetHandlers,runtimeFacetHandlerFactories);
+     decorator = new SenseiIndexReaderDecorator(facetHandlers,runtimeFacetHandlerFactories);
     File idxDir = new File(_senseiConf.getString(SENSEI_INDEX_DIR));
     SenseiZoieFactory<?> zoieSystemFactory = null;
 
