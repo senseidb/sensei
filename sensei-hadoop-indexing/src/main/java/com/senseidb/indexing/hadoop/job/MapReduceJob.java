@@ -1,10 +1,16 @@
 package com.senseidb.indexing.hadoop.job;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.text.NumberFormat;
-import java.util.Arrays;
+import com.senseidb.indexing.hadoop.keyvalueformat.IntermediateForm;
+import com.senseidb.indexing.hadoop.keyvalueformat.Shard;
+import com.senseidb.indexing.hadoop.map.SenseiMapper;
+import com.senseidb.indexing.hadoop.reduce.FileSystemDirectory;
+import com.senseidb.indexing.hadoop.reduce.IndexUpdateOutputFormat;
+import com.senseidb.indexing.hadoop.reduce.SenseiCombiner;
+import com.senseidb.indexing.hadoop.reduce.SenseiReducer;
+import com.senseidb.indexing.hadoop.util.LuceneUtil;
+import com.senseidb.indexing.hadoop.util.MRConfig;
+import com.senseidb.indexing.hadoop.util.MRJobConfig;
+import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -22,17 +28,14 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
 
-import com.senseidb.indexing.hadoop.keyvalueformat.IntermediateForm;
-import com.senseidb.indexing.hadoop.keyvalueformat.Shard;
-import com.senseidb.indexing.hadoop.map.SenseiMapper;
-import com.senseidb.indexing.hadoop.reduce.FileSystemDirectory;
-import com.senseidb.indexing.hadoop.reduce.IndexUpdateOutputFormat;
-import com.senseidb.indexing.hadoop.reduce.SenseiCombiner;
-import com.senseidb.indexing.hadoop.reduce.SenseiReducer;
-import com.senseidb.indexing.hadoop.util.LuceneUtil;
-import com.senseidb.indexing.hadoop.util.MRConfig;
-import com.senseidb.indexing.hadoop.util.MRJobConfig;
-import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class MapReduceJob extends Configured {
 
@@ -189,12 +192,24 @@ public class MapReduceJob extends Configured {
 	          count++;
 	        }
 	      }
-	      Arrays.sort(shardNames, 0, count);
-
+	      
+	      List<String> shardNamesList = Arrays.asList(shardNames);
+          Collections.sort(shardNamesList, new Comparator<String>() {
+              @Override
+              public int compare(String shardName1, String shardName2) {
+                  if (shardName1.length() < shardName2.length())
+                      return -1;
+                  else if (shardName1.length() > shardName2.length())
+                      return 1;
+                  else
+                      return shardName1.compareTo(shardName2);
+              }
+          });
+          
 	      Shard[] shards = new Shard[count >= numShards ? count : numShards];
 	      for (int i = 0; i < count; i++) {
 	        shards[i] =
-	            new Shard(versionNumber, parent + shardNames[i], generation);
+	            new Shard(versionNumber, parent + shardNamesList.get(i), generation);
 	      }
 
 	      int number = count;
