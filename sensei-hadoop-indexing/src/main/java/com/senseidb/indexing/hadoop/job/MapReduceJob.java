@@ -3,7 +3,6 @@ package com.senseidb.indexing.hadoop.job;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.NumberFormat;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +35,6 @@ import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
 
 public class MapReduceJob extends Configured {
 
-	private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
 	private static final Logger logger = Logger.getLogger(MapReduceJob.class);
 	
 	  public JobConf createJob(Class MRClass) throws IOException, URISyntaxException {
@@ -201,7 +199,7 @@ public class MapReduceJob extends Configured {
 	      for (int i = count; i < numShards; i++) {
 	        String shardPath;
 	        while (true) {
-	          shardPath = parent + indexSubDirPrefix + NUMBER_FORMAT.format(number++);
+	          shardPath = parent + indexSubDirPrefix + String.format("%05d", number++);
 	          if (!fs.exists(new Path(shardPath))) {
 	            break;
 	          }
@@ -213,7 +211,7 @@ public class MapReduceJob extends Configured {
 	      Shard[] shards = new Shard[numShards];
 	      for (int i = 0; i < shards.length; i++) {
 	        shards[i] =
-	            new Shard(versionNumber, parent + indexSubDirPrefix + NUMBER_FORMAT.format(i),
+	            new Shard(versionNumber, parent + indexSubDirPrefix + String.format("%05d", i),
 	                generation);
 	      }
 	      return shards;
