@@ -2,9 +2,7 @@
 package com.senseidb.gateway.rabbitmq;
 
 import com.senseidb.indexing.DataSourceFilter;
-import com.senseidb.indexing.ShardingStrategy;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +12,6 @@ import proj.zoie.impl.indexing.StreamDataProvider;
 
 import java.io.IOException;
 import java.util.Comparator;
-import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -33,29 +30,18 @@ public class RabbitMQStreamDataProvider extends StreamDataProvider<JSONObject> {
     private RabbitMQConsumerManager[] _rabbitMQConsumerManagers;
 
     private RabbitMQConfig[] _rabbitMQConfigs;
-    private int _maxPartitionId;
     private DataSourceFilter<byte[]> _dataFilter;
-    private ShardingStrategy _shardingStrategy;
-    private Set<Integer> _partitions;
 
     private volatile boolean _isStarted = false;
 
-    public RabbitMQStreamDataProvider(Comparator<String> versionComparator, RabbitMQConfig[] rabbitMQConfigs, int maxPartitionId,
-                                      DataSourceFilter<byte[]> dataFilter, String Oldsincekey, ShardingStrategy shardingStrategy,
-                                      Set<Integer> partitions) {
+    public RabbitMQStreamDataProvider(Comparator<String> versionComparator, RabbitMQConfig[] rabbitMQConfigs,
+                                      DataSourceFilter<byte[]> dataFilter, String Oldsincekey) {
         super(versionComparator);
         _rabbitMQConfigs = rabbitMQConfigs;
-        _maxPartitionId = maxPartitionId;
         _dataFilter = dataFilter;
-        _shardingStrategy = shardingStrategy;
-        _partitions = partitions;
 
         _scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
         _filteredData = new ArrayBlockingQueue<JSONObject>(100000, true);
-
-        _logger.info("Initialize RabbitMQStreamDataProvider, maxPartitionId {} partitions {}", new Object[] {
-            maxPartitionId, partitions
-        });
     }
 
     @Override
@@ -92,6 +78,14 @@ public class RabbitMQStreamDataProvider extends StreamDataProvider<JSONObject> {
                 }
             }
         }, 0, 1000 * 10, TimeUnit.MILLISECONDS); // 10 seconds
+
+        // check BlockingQueue
+        _scheduledExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                _logger.info("Blocking Queue's size is {}", getQueueSize());
+            }
+        }, 0, 1000 * 60, TimeUnit.MILLISECONDS);
 
         super.start();
         _isStarted = true;
@@ -141,17 +135,9 @@ public class RabbitMQStreamDataProvider extends StreamDataProvider<JSONObject> {
         if (null == filteredData)
             return null;
 
-        try {
-            if (!_partitions.contains(_shardingStrategy.caculateShard(_maxPartitionId + 1, new JSONObject().put("data", filteredData))))
-                return null;
-        } catch (JSONException e) {
-            _logger.error("Unexpected exception", e);
-            return null;
-        }
-
         long version = System.currentTimeMillis();
         DataEvent<JSONObject> dataEvent = new DataEvent<JSONObject>(filteredData, String.valueOf(version));
-        _logger.info("Successfully generate DataEvent : {}", dataEvent.getData().toString());
+        _logger.info("Successfully consume DataEvent : {}", dataEvent.getData().toString());
 
         return dataEvent;
     }
@@ -171,6 +157,13 @@ public class RabbitMQStreamDataProvider extends StreamDataProvider<JSONObject> {
         } catch (InterruptedException e) {
             _logger.error("Meet InterruptedException when trying to put filtered data into queue.", e);
         }
+    }
+
+    int getQueueSize() {
+        if (null != _filteredData) {
+            return _filteredData.size();
+        }
+        return 0;
     }
 
     DataSourceFilter<byte[]> getDataSourceFilter() {

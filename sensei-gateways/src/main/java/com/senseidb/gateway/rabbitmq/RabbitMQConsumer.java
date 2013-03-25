@@ -69,7 +69,6 @@ public class RabbitMQConsumer implements Runnable {
                 JSONObject filteredData = dataSourceFilter.filter(delivery.getBody());
                 if (null != filteredData) {
                     this._rabbitMQStreamDataProvider.putFilteredIntoQueue(filteredData);
-                    _logger.info("RabbitMQConsumer {} consumes filtered data {}", _name, filteredData);
                 }
 
                 channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);

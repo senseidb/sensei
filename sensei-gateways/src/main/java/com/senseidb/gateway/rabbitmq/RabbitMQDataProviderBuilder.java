@@ -25,7 +25,7 @@ import java.util.Set;
  */
 public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
     private static final Logger _logger = LoggerFactory.getLogger(RabbitMQDataProviderBuilder.class);
-    
+
     // RabbitMQ servers configuration
     private RabbitMQConfig[] _mqConfigs;
 
@@ -45,34 +45,20 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
     private static final String RABBIT_MQ_QUEUE_EXCLUSIVE = ".queue.exclusive";
     private static final String RABBIT_MQ_QUEUE_AUTO_DELETE = ".queue.auto.delete";
     private static final String RABBIT_MQ_CONSUMER_COUNT = ".consumer.count";
-    
-    private static final String MAX_PARTITION_ID = "maxpartition.id";
-    
-    
+
     /**
-     * example:
-     * # rabbitMQ gateway parameters
+     * example: # rabbitMQ gateway parameters
      * sensei.gateway.class=com.senseidb.gateway.rabbitmq.RabbitMQDataProviderBuilder
-     * sensei.gateway.rabbitmq.servers.names=server1,server2
-     * sensei.gateway.server1.host=192.168.1.9
-     * sensei.gateway.server1.exchange.name=userInfoUpdate_in_exchange
-     * sensei.gateway.server1.exchange.type=direct
-     * sensei.gateway.server1.exchange.durable=false
-     * sensei.gateway.server1.queue.name=sensei_search_users_1
-     * sensei.gateway.server1.queue.routing.key=userInfoUpdate
-     * sensei.gateway.server1.queue.durable=true
-     * sensei.gateway.server1.queue.exclusive=false
-     * sensei.gateway.server1.queue.auto.delete=false
-     * sensei.gateway.server1.consumer.count=5
-     * sensei.gateway.server2.host=192.168.1.11
-     * sensei.gateway.server2.exchange.name=userInfoUpdate_in_exchange
-     * sensei.gateway.server2.exchange.type=direct
-     * sensei.gateway.server2.exchange.durable=false
-     * sensei.gateway.server2.queue.name=sensei_search_users_1
-     * sensei.gateway.server2.queue.routing.key=userInfoUpdate
-     * sensei.gateway.server2.queue.durable=true
-     * sensei.gateway.server2.queue.exclusive=false
-     * sensei.gateway.server2.queue.auto.delete=false
+     * sensei.gateway.rabbitmq.servers.names=server1,server2 sensei.gateway.server1.host=192.168.1.9
+     * sensei.gateway.server1.exchange.name=userInfoUpdate_in_exchange sensei.gateway.server1.exchange.type=direct
+     * sensei.gateway.server1.exchange.durable=false sensei.gateway.server1.queue.name=sensei_search_users_1
+     * sensei.gateway.server1.queue.routing.key=userInfoUpdate sensei.gateway.server1.queue.durable=true
+     * sensei.gateway.server1.queue.exclusive=false sensei.gateway.server1.queue.auto.delete=false
+     * sensei.gateway.server1.consumer.count=5 sensei.gateway.server2.host=192.168.1.11
+     * sensei.gateway.server2.exchange.name=userInfoUpdate_in_exchange sensei.gateway.server2.exchange.type=direct
+     * sensei.gateway.server2.exchange.durable=false sensei.gateway.server2.queue.name=sensei_search_users_1
+     * sensei.gateway.server2.queue.routing.key=userInfoUpdate sensei.gateway.server2.queue.durable=true
+     * sensei.gateway.server2.queue.exclusive=false sensei.gateway.server2.queue.auto.delete=false
      * sensei.gateway.server2.consumer.count=5
      */
     private void initRabbitMQConfigs() {
@@ -148,9 +134,7 @@ public class RabbitMQDataProviderBuilder extends SenseiGateway<byte[]> {
     public StreamDataProvider<JSONObject> buildDataProvider(DataSourceFilter<byte[]> dataFilter, String Oldsincekey,
         ShardingStrategy shardingStrategy, Set<Integer> partitions) throws Exception {
         initRabbitMQConfigs();
-        int maxPartitionId = Integer.parseInt(config.get(MAX_PARTITION_ID));
-        return new RabbitMQStreamDataProvider(DEFAULT_VERSION_COMPARATOR, _mqConfigs, maxPartitionId, dataFilter, Oldsincekey,
-                shardingStrategy, partitions);
+        return new RabbitMQStreamDataProvider(DEFAULT_VERSION_COMPARATOR, _mqConfigs, dataFilter, Oldsincekey);
     }
 
 }
