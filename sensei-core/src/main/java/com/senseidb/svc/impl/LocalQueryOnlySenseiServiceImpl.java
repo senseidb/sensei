@@ -18,6 +18,7 @@ import com.senseidb.search.node.impl.DemoZoieSystemFactory;
 import com.senseidb.search.req.SenseiRequest;
 import com.senseidb.search.req.SenseiResult;
 import com.senseidb.search.req.SenseiSystemInfo;
+import com.senseidb.search.req.mapred.impl.DefaultFieldAccessorFactory;
 import com.senseidb.svc.api.SenseiException;
 import com.senseidb.svc.api.SenseiService;
 
@@ -36,7 +37,7 @@ public class LocalQueryOnlySenseiServiceImpl implements SenseiService {
     },zoieConfig);
     QueryParser queryParser = new QueryParser(Version.LUCENE_35,"contents", new StandardAnalyzer(Version.LUCENE_35));
     DefaultJsonQueryBuilderFactory queryBuilderFactory = new DefaultJsonQueryBuilderFactory(queryParser);
-    _core = new SenseiCore(1,new int[]{0},zoieFactory,null,queryBuilderFactory, zoieFactory.getDecorator());
+    _core = new SenseiCore(1,new int[]{0},zoieFactory,null,queryBuilderFactory, new DefaultFieldAccessorFactory(), zoieFactory.getDecorator());
     _coreService = new CoreSenseiServiceImpl(_core);
     _core.start();
   }

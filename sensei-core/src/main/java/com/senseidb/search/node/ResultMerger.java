@@ -568,27 +568,27 @@ public class ResultMerger
 
   }
 
-  public static int getNumHits(Collection<SenseiResult> results) {
-    int numHits = 0;
+  public static long getNumHits(Collection<SenseiResult> results) {
+    long numHits = 0;
     for(SenseiResult res : results)
     {
-      numHits += res.getNumHits();
+      numHits += res.getNumHitsLong();
     }
     return numHits;
   }
 
-  public static int getTotalDocs(Collection<SenseiResult> results) {
-    int totalDocs = 0;
+  public static long getTotalDocs(Collection<SenseiResult> results) {
+    long totalDocs = 0;
     for(SenseiResult res : results) {
-      totalDocs += res.getTotalDocs();
+      totalDocs += res.getTotalDocsLong();
     }
     return totalDocs;
   }
 
-  public static int getNumGroups(Collection<SenseiResult> results) {
-    int numGroups = 0;
+  public static long getNumGroups(Collection<SenseiResult> results) {
+    long numGroups = 0;
     for(SenseiResult res : results) {
-      numGroups += res.getNumGroups();
+      numGroups += res.getNumGroupsLong();
     }
     return numGroups;
   }
@@ -662,9 +662,9 @@ public class ResultMerger
     final int topHits = req.getOffset() + req.getCount();
 
     // Sum the hits, groups, totalDocs, etc from all the results
-    final int numHits = getNumHits(results);
-    final int numGroups = getNumGroups(results);
-    int totalDocs = getTotalDocs(results);
+    final long numHits = getNumHits(results);
+    final long numGroups = getNumGroups(results);
+    long totalDocs = getTotalDocs(results);
     final long longestTime = findLongestTime(results);
 
     final String parsedQuery = findParsedQuery(results);
@@ -843,9 +843,9 @@ public class ResultMerger
 
     SenseiResult merged = new SenseiResult();
     merged.setHits(hits);
-    merged.setNumHits(numHits);
-    merged.setNumGroups(numGroups);
-    merged.setTotalDocs(totalDocs);
+    merged.setNumHitsLong(numHits);
+    merged.setNumGroupsLong(numGroups);
+    merged.setTotalDocsLong(totalDocs);
     merged.addAll(mergedFacetMap);
 
     long end = System.currentTimeMillis();

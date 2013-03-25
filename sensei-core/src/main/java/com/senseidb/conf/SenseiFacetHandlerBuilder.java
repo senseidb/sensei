@@ -49,6 +49,7 @@ import com.senseidb.plugin.SenseiPluginRegistry;
 import com.senseidb.search.facet.UIDFacetHandler;
 import com.senseidb.search.plugin.PluggableSearchEngineManager;
 import com.senseidb.search.req.SenseiSystemInfo;
+import com.senseidb.search.req.mapred.functions.groupby.SumGroupByFacetHandler;
 
 public class SenseiFacetHandlerBuilder {
 
@@ -56,7 +57,7 @@ public class SenseiFacetHandlerBuilder {
 			.getLogger(SenseiFacetHandlerBuilder.class);
 
 	public static String UID_FACET_NAME = "_uid";
-
+	public static String SUM_GROUP_BY_FACET_NAME = "_sumGroupBy";
 	private static Map<String, TermListFactory<?>> getPredefinedTermListFactoryMap(JSONObject schemaObj) throws JSONException,ConfigurationException {
 		HashMap<String, TermListFactory<?>> retMap = new HashMap<String, TermListFactory<?>>();
 		JSONObject tableElem = schemaObj.optJSONObject("table");
@@ -459,7 +460,9 @@ public class SenseiFacetHandlerBuilder {
 		facets.addAll((Collection<? extends FacetHandler<?>>) pluggableSearchEngineManager.createFacetHandlers());
 		// uid facet handler to be added by default
 		UIDFacetHandler uidHandler = new UIDFacetHandler(UID_FACET_NAME);
+		SumGroupByFacetHandler sumGroupByFacetHandler = new SumGroupByFacetHandler(SUM_GROUP_BY_FACET_NAME); 
 		facets.add(uidHandler);
+		facets.add(sumGroupByFacetHandler);
     sysInfo.setFacetInfos(facetInfos);
 
     return sysInfo;

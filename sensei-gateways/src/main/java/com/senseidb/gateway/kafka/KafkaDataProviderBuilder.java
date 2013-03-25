@@ -10,6 +10,8 @@ import proj.zoie.impl.indexing.StreamDataProvider;
 import proj.zoie.impl.indexing.ZoieConfig;
 
 import com.senseidb.gateway.SenseiGateway;
+import com.senseidb.gateway.kafka.persistent.PersistentCacheManager;
+import com.senseidb.gateway.kafka.persistent.PersistentKafkaStreamDataProvider;
 import com.senseidb.indexing.DataSourceFilter;
 import com.senseidb.indexing.ShardingStrategy;
 
@@ -17,13 +19,14 @@ public class KafkaDataProviderBuilder extends SenseiGateway<DataPacket>{
 
 	private final Comparator<String> _versionComparator = ZoieConfig.DEFAULT_VERSION_COMPARATOR;
 
-  private void extractProperty(Properties props, String key)
+  private void extractProperties(Properties props)
   {
-    String value = config.get("kafka." + key);
-    if (value != null && value.length() != 0)
-    {
-      props.setProperty(key, value);
+    for(String key : config.keySet()) {
+      if (key.startsWith("kafka.")) {
+        props.put(key.substring("kafka.".length()), config.get(key));
+      }
     }
+    
   }
 
 	@Override
@@ -37,16 +40,10 @@ public class KafkaDataProviderBuilder extends SenseiGateway<DataPacket>{
     String topic = config.get("kafka.topic");
     String timeoutStr = config.get("kafka.timeout");
     int timeout = timeoutStr != null ? Integer.parseInt(timeoutStr) : 10000;
-    int batchsize = Integer.parseInt(config.get("kafka.batchsize"));
+    int batchsize = config.get("kafka.batchsize") != null ? Integer.parseInt(config.get("kafka.batchsize")) : 500;
 
     Properties props = new Properties();
-    extractProperty(props, "socket.timeout.ms");
-    extractProperty(props, "socket.buffersize");
-    extractProperty(props, "fetch.size");
-    extractProperty(props, "backoff.increment.ms");
-    extractProperty(props, "queuedchunks.max");
-    extractProperty(props, "autocommit.interval.ms");
-    extractProperty(props, "rebalance.retries.max");
+    extractProperties(props);
 
     long offset = oldSinceKey == null ? 0L : Long.parseLong(oldSinceKey);
     
@@ -71,17 +68,15 @@ public class KafkaDataProviderBuilder extends SenseiGateway<DataPacket>{
         throw new IllegalArgumentException("invalid msg type: "+type);
       }
     }
-    
-		KafkaStreamDataProvider provider = new KafkaStreamDataProvider(_versionComparator,
-                                                                   zookeeperUrl,
-                                                                   timeout,
-                                                                   batchsize,
-                                                                   consumerGroupId,
-                                                                   topic,
-                                                                   offset,
-                                                                   dataFilter,
-                                                                   props);
-		return provider;
+    String persistentManagerName = config.get("kafka.persistentManager");
+    if (persistentManagerName == null) {
+      KafkaStreamDataProvider provider = new KafkaStreamDataProvider(_versionComparator,zookeeperUrl,timeout,batchsize,consumerGroupId,topic,offset,dataFilter, props);
+      return provider;
+    } else {
+      PersistentKafkaStreamDataProvider wrappedKafkaStreamProvider = new PersistentKafkaStreamDataProvider(_versionComparator,zookeeperUrl,timeout,batchsize,consumerGroupId,topic,offset,dataFilter, pluginRegistry.getBeanByName(persistentManagerName, PersistentCacheManager.class));
+      return wrappedKafkaStreamProvider;
+    }
+ 
 	}
 
   @Override

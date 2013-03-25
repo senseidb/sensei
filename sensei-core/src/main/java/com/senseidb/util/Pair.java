@@ -1,6 +1,8 @@
 package com.senseidb.util;
 
-public class Pair<FIRST, SECOND> {
+import java.io.Serializable;
+
+public class Pair<FIRST, SECOND> implements Serializable {
   private FIRST first;
   private SECOND second;
   public FIRST getFirst() {

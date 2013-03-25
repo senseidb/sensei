@@ -72,16 +72,23 @@ public class SenseiServiceProxy {
     }
     public SenseiResult sendBQL( String bql) {
       try {
-        StringBuilder buffer = new StringBuilder();
-        buffer.append("{'bql':").append(bql).append("}");
-        String requestStr = buffer.toString();
-        String output = sendPostRaw(getSearchUrl(), requestStr);
+        String output = sendBQLRaw(bql);
         return JsonDeserializer.deserialize(SenseiResult.class, jsonResponse(output));
       } catch (Exception ex) {
         throw new RuntimeException(ex);
       }
     }
-    
+    public String sendBQLRaw( String bql) {
+      try {
+        JSONObject bqlJson = new JSONObject().put("bql", bql);
+        
+       
+        String output = sendPostRaw(getSearchUrl(), bqlJson.toString());
+       return output;
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
+    }
 
   public Map<Long, JSONObject> sendGetRequest(long... uids) throws IOException, JSONException {
     Map<Long, JSONObject> ret = new LinkedHashMap<Long, JSONObject>(uids.length);

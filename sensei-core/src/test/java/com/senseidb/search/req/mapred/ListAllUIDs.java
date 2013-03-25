@@ -15,12 +15,11 @@ public class ListAllUIDs implements SenseiMapReduce<Serializable, Serializable>{
   }
 
   @Override
-  public Serializable map(int[] docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public Serializable map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
     ArrayList<Long> collectedUids = new ArrayList<Long>(docIdCount);
     for (int i = 0; i < docIdCount; i++) {
-      collectedUids.add(uids[docIds[i]]);
+      collectedUids.add(uids[docIds.get(i)]);
     }
-    System.out.println("!!!" + collectedUids);
     return collectedUids;
   }
 

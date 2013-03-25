@@ -22,6 +22,7 @@ import proj.zoie.impl.indexing.ZoieConfig;
 import com.browseengine.bobo.api.BoboIndexReader;
 import com.senseidb.conf.SenseiSchema.FieldDefinition;
 import com.senseidb.search.node.SenseiCore;
+import com.senseidb.search.req.mapred.impl.DefaultFieldAccessorFactory;
 import com.senseidb.test.SenseiStarter;
 
 public class PurgeUnusedActivitiesJobTest extends TestCase {
@@ -68,7 +69,7 @@ public class PurgeUnusedActivitiesJobTest extends TestCase {
     compositeActivityValues.flush();
     compositeActivityValues.syncWithPersistentVersion(String.format("%08d", valueCount - 1));
     assertEquals(100000, compositeActivityValues.metadata.count);
-    SenseiCore senseiCore = new SenseiCore(0, new int[] {0}, null, null, null, null) {
+    SenseiCore senseiCore = new SenseiCore(0, new int[] {0}, null, null, null, new DefaultFieldAccessorFactory(), null) {
       @Override
       public IndexReaderFactory<ZoieIndexReader<BoboIndexReader>> getIndexReaderFactory(int partition) {
           return zoie;

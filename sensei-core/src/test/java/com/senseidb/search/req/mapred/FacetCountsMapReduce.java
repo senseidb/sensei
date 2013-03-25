@@ -27,7 +27,7 @@ public class FacetCountsMapReduce implements SenseiMapReduce<HashMap<String, Int
       throw new RuntimeException(ex);
     }
   }
-  public HashMap<String, IntContainer> map(int[] docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public HashMap<String, IntContainer> map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
     if (!facetCountAccessor.areFacetCountsPresent()) {
       return null;
     }

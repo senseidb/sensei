@@ -9,8 +9,9 @@ import org.json.JSONObject;
 import com.senseidb.search.req.mapred.CombinerStage;
 import com.senseidb.search.req.mapred.FacetCountAccessor;
 import com.senseidb.search.req.mapred.FieldAccessor;
+import com.senseidb.search.req.mapred.IntArray;
 import com.senseidb.search.req.mapred.SenseiMapReduce;
-import com.senseidb.util.JSONUtil.FastJSONArray;
+import com.senseidb.search.req.mapred.SingleFieldAccessor;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
 public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
@@ -26,10 +27,11 @@ public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
   }
 
   @Override
-  public AvgResult map(int[] docId, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
-    double ret = 0;
+  public AvgResult map(IntArray docId, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+      SingleFieldAccessor singleFieldAccessor = accessor.getSingleFieldAccessor(column);
+      double ret = 0;
     for (int i = 0; i < docIdCount; i++) {
-      ret+= accessor.getDouble(column, docId[i]);
+      ret+= singleFieldAccessor.getDouble(docId.get(i));
     }  
     return new AvgResult(ret / docIdCount, docIdCount);
   }
@@ -75,15 +77,15 @@ public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
  
   @Override
   public JSONObject render(AvgResult reduceResult) {
-   
+    
     try {
-      return new FastJSONObject().put("avg", reduceResult.value).put("count", reduceResult.count);
+      return new FastJSONObject().put("avg", String.format("%1.5f", reduceResult.value)).put("count", reduceResult.count);
     } catch (JSONException e) {
       throw new RuntimeException(e);
     }
   }
 
-  
+ 
   
   
 }

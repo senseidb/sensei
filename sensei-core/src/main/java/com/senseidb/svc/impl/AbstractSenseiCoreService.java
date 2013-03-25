@@ -93,7 +93,7 @@ public abstract class AbstractSenseiCoreService<Req extends AbstractSenseiReques
     return timer;
   }
 	
-	public final Res execute(final Req senseiReq){
+	public  Res execute(final Req senseiReq){
 		SearchCounter.mark();
 		Set<Integer> partitions = senseiReq==null ? null : senseiReq.getPartitions();
 		if (partitions==null){

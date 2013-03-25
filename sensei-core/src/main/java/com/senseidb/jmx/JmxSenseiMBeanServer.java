@@ -3,10 +3,14 @@ package com.senseidb.jmx;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
 import org.apache.log4j.Logger;
@@ -49,8 +53,13 @@ public class JmxSenseiMBeanServer {
     }
 
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-      if (!method.getName().equals("registerMBean")) {
-        return method.invoke(mBeanServer, args);
+      if (!method.getName().equals("registerMBean")) {        
+        if (method.getName().equals("unregisterMBean")) {
+          return handleBeanUnregister(method, args);
+        } else {
+          return method.invoke(mBeanServer, args);
+        }
+        
       }
       ObjectName objectName = (ObjectName) args[1];
       String canonicalName = objectName.getCanonicalName();
@@ -66,6 +75,31 @@ public class JmxSenseiMBeanServer {
       }
       args[1] = objectName;
       return method.invoke(mBeanServer, args);
+    }
+
+    public Object handleBeanUnregister(Method method, Object[] args) throws IllegalAccessException, InvocationTargetException,
+        MalformedObjectNameException, MBeanRegistrationException, InstanceNotFoundException {
+      ObjectName objectName = (ObjectName) args[0];
+      if (mBeanServer.isRegistered(objectName)) {
+        return method.invoke(mBeanServer, args);
+      }
+      Object ret = null;
+      for (int i = 0; i < 200; i++) {
+        if (!mBeanServer.isRegistered(objectName)) {
+          break;
+        }
+        ObjectName currentObjectName = new ObjectName(objectName.getCanonicalName() + i);
+        if (mBeanServer.isRegistered(currentObjectName)) {
+           if (ret == null) {
+             ret = method.invoke(mBeanServer, new Object[] {currentObjectName});
+           } else {
+             mBeanServer.unregisterMBean(currentObjectName);
+           }
+        } else {
+          break;
+        }
+      }
+      return ret;
     }
   }
 }

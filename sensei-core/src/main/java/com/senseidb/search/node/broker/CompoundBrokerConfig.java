@@ -13,6 +13,9 @@ public class CompoundBrokerConfig extends BrokerConfig {
     super(senseiConf, loadBalancerFactory);
     
     this.clusterName = clusterName;
+    if (config.containsKey(clusterName + ".clusterName")) {
+      this.clusterName = config.get(clusterName + ".clusterName");
+    }
     zkurl = getStrParam(clusterName, config, SenseiConfParams.SENSEI_CLUSTER_URL, zkurl);
     zkTimeout = getIntParam(clusterName, config, SenseiConfParams.SENSEI_CLUSTER_TIMEOUT, zkTimeout);   
     connectTimeoutMillis = getIntParam(clusterName, config, SenseiConfigServletContextListener.SENSEI_CONF_NC_CONN_TIMEOUT, connectTimeoutMillis);   
@@ -23,9 +26,9 @@ public class CompoundBrokerConfig extends BrokerConfig {
     
   }
   private String getStrParam(String clusterName, Map<String,String> config, String paramName, String defaultParam) {
-    return config.containsKey(clusterName + "." + paramName) ? config.get(clusterName + "." + paramName.substring(paramName.lastIndexOf(".") + 1)) : defaultParam;
+    return config.containsKey(clusterName + "." + paramName) ? config.get(clusterName + "." + paramName) : defaultParam;
   }
   private Integer getIntParam(String clusterName, Map<String,String> config, String paramName, int defaultParam) {
-    return config.containsKey(clusterName + "." + paramName) ? Integer.parseInt(config.get(clusterName + "." + paramName.substring(paramName.lastIndexOf(".") + 1))) : defaultParam;
+    return config.containsKey(clusterName + "." + paramName) ? Integer.parseInt(config.get(clusterName + "." + paramName)) : defaultParam;
   }
 }

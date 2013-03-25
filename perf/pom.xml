@@ -32,31 +32,24 @@
 	</properties>
 
 	<dependencies>
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>sensei-core</artifactId>
-			<version>1.5.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>sensei-java-client</artifactId>
-			<version>1.5.1-SNAPSHOT</version>
-		</dependency>
-		
-		<dependency>
-			<groupId>com.yammer.metrics</groupId>
-			<artifactId>metrics-core_2.8.1</artifactId>
-			<version>2.0.0-BETA13</version>
-		</dependency>
 
 		<dependency>
-			<groupId>commons-configuration</groupId>
-			<artifactId>commons-configuration</artifactId>
-			<version>1.6</version>
-		</dependency>
-		
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-codecs</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers-common</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+<dependency>
+    <groupId>org.apache.lucene</groupId>
+    <artifactId>lucene-queryparser</artifactId>
+    <version>4.0.0</version>
+</dependency>
 	</dependencies>
-
+            
     <repositories>
       <repository>
         <id>codahale</id>

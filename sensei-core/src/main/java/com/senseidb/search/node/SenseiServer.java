@@ -23,6 +23,7 @@ import com.senseidb.jmx.JmxUtil;
 import com.senseidb.plugin.SenseiPluginRegistry;
 import com.senseidb.search.req.AbstractSenseiRequest;
 import com.senseidb.search.req.AbstractSenseiResult;
+import com.senseidb.search.req.mapred.impl.DefaultFieldAccessorFactory;
 import com.senseidb.svc.impl.AbstractSenseiCoreService;
 import com.senseidb.svc.impl.CoreSenseiServiceImpl;
 import com.senseidb.svc.impl.SenseiCoreServiceMessageHandler;
@@ -61,7 +62,7 @@ public class SenseiServer {
                       SenseiQueryBuilderFactory queryBuilderFactory,
                       List<AbstractSenseiCoreService<AbstractSenseiRequest, AbstractSenseiResult>> externalSvc, SenseiPluginRegistry pluginRegistry)
   {
-    this(port,networkServer,clusterClient,new SenseiCore(id, partitions,zoieSystemFactory, indexingManager, queryBuilderFactory, zoieSystemFactory.getDecorator()),externalSvc, pluginRegistry);
+    this(port,networkServer,clusterClient,new SenseiCore(id, partitions,zoieSystemFactory, indexingManager, queryBuilderFactory, new DefaultFieldAccessorFactory(), zoieSystemFactory.getDecorator()),externalSvc, pluginRegistry);
   }
 
   public SenseiServer(int port,

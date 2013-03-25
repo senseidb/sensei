@@ -19,8 +19,7 @@ public class SenseiIndexReaderDecorator extends AbstractIndexReaderDecorator<Bob
     private final List<FacetHandler<?>> _facetHandlers;
     private static final Logger logger = Logger.getLogger(SenseiIndexReaderDecorator.class);
     private final List<RuntimeFacetHandlerFactory<?, ?>> _facetHandlerFactories;
-    private List<BoboListener> boboListeners = new ArrayList<SenseiIndexReaderDecorator.BoboListener>();
-
+    
     public SenseiIndexReaderDecorator(List<FacetHandler<?>> facetHandlers, List<RuntimeFacetHandlerFactory<?, ?>> facetHandlerFactories) {
         _facetHandlers = facetHandlers;
         _facetHandlerFactories = facetHandlerFactories;
@@ -43,49 +42,19 @@ public class SenseiIndexReaderDecorator extends AbstractIndexReaderDecorator<Bob
         if (zoieReader != null) {
             boboReader = BoboIndexReader.getInstanceAsSubReader(zoieReader, _facetHandlers, _facetHandlerFactories);
         }
-        applyListeners(boboReader);
+       
         return boboReader;
     }
 
-    private BoboIndexReader applyListeners(final BoboIndexReader boboReader) {
-        for (BoboListener boboListener : boboListeners) {
-            boboListener.indexCreated(boboReader);
-        }
-        boboReader.addReaderFinishedListener(new SenseiIndexReaderFinishedListener(boboListeners));
-        return boboReader;
-
-    }
-
+    
     @Override
     public BoboIndexReader redecorate(BoboIndexReader reader, ZoieIndexReader<BoboIndexReader> newReader, boolean withDeletes)
             throws IOException {
-        return applyListeners(reader.copy(newReader));
+        return reader.copy(newReader);
     }
 
-    public static interface BoboListener {
-        public void indexCreated(BoboIndexReader boboIndexReader);
-
-        public void indexDeleted(IndexReader indexReader);
-    }
-
-    public void addBoboListener(BoboListener boboListener) {
-        boboListeners.add(boboListener);
-    }
+   
 
 }
 
-class SenseiIndexReaderFinishedListener implements IndexReader.ReaderFinishedListener {
-    private static final Logger log = Logger.getLogger(SenseiIndexReaderFinishedListener.class);
-    private final Collection<SenseiIndexReaderDecorator.BoboListener> boboListeners;
 
-    SenseiIndexReaderFinishedListener(Collection<SenseiIndexReaderDecorator.BoboListener> boboListeners) {
-        this.boboListeners = boboListeners;
-    }
-
-    @Override
-    public void finished(IndexReader indexReader) {
-        for (SenseiIndexReaderDecorator.BoboListener boboListener : boboListeners) {
-            boboListener.indexDeleted(indexReader);
-        }
-    }
-}

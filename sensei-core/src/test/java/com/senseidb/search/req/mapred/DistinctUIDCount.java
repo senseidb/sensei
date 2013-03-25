@@ -26,10 +26,10 @@ public class DistinctUIDCount implements SenseiMapReduce<HashSet<Long>, Integer>
   }
 
   @Override
-  public HashSet<Long> map(int[] docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public HashSet<Long> map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
     HashSet<Long> ret = new HashSet<Long>(docIdCount);
     for (int i = 0; i < docIdCount; i++) {
-      ret.add(uids[docIds[i]]);
+      ret.add(uids[docIds.get(i)]);
     }
     return ret;
   }

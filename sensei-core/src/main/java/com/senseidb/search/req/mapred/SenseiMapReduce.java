@@ -31,7 +31,7 @@ public interface SenseiMapReduce<MapResult extends Serializable, ReduceResult ex
    * @param facetCountsAccessor 
    * @return arbitrary map function results
    */
-  public MapResult map(int[] docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountsAccessor);
+  public MapResult map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountsAccessor);
   /**
    * Merge map results objects to reduce memory and serialization costs. If this method will not merge map results, there is a high chance, that you'd get 
    * outOfMemory in case there is a significant number of documents indexed

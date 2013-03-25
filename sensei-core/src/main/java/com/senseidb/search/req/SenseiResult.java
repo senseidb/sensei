@@ -22,9 +22,11 @@ public class SenseiResult extends BrowseResult implements AbstractSenseiResult
   private static final long serialVersionUID = 1L;
 
   private String _parsedQuery = null;
-
+  long numberOfDocsLong = 0;
+  long numberOfHitsLong = 0;
+  long numberOfGroupsLong = 0;
   private List<SenseiError> errors;
- 
+  
   public SenseiHit[] getSenseiHits()
   {
     BrowseHit[] hits = getHits();
@@ -60,10 +62,10 @@ public class SenseiResult extends BrowseResult implements AbstractSenseiResult
     if (getNumGroups() != getNumGroups()) return false;
     if (getTotalDocs() != getTotalDocs()) return false;
     if (!facetMapsAreEqual(getFacetMap(), b.getFacetMap())) return false;
-
     return true;
   }
-
+   
+ 
   private boolean senseiHitsAreEqual(SenseiHit[] a, SenseiHit[] b) {
     if (a == null) return b == null;
     if (a.length != b.length) return false;
@@ -133,7 +135,53 @@ public class SenseiResult extends BrowseResult implements AbstractSenseiResult
 
     return errors ;
   }
-
+  public long getTotalDocsLong() {
+    if (numberOfDocsLong == 0l) {
+      return super.getTotalDocs();
+    }
+    return numberOfDocsLong;
+  }
+  
+  
+  public void setTotalDocsLong(long numberOfDocsLong) {
+    this.numberOfDocsLong = numberOfDocsLong;
+  }
+  public long getNumHitsLong() {
+    if (numberOfHitsLong == 0l) {
+      return super.getNumHits();
+    }
+    return numberOfHitsLong;
+  }
+  @Override
+  public int getNumHits() {
+    // TODO Auto-generated method stub
+    return (int)getNumHitsLong();
+  }
+  @Override
+  public int getNumGroups() {
+    // TODO Auto-generated method stub
+    return (int) getNumGroupsLong();
+  }
+  @Override
+  public int getTotalDocs() {
+    // TODO Auto-generated method stub
+    return (int) getTotalDocsLong();
+  }
+  
+  public void setNumHitsLong(long numberOfHitsLong) {
+    this.numberOfHitsLong = numberOfHitsLong;
+  }
+  public long getNumGroupsLong() {
+    if (numberOfGroupsLong == 0l) {
+      return super.getNumGroups();
+    }
+    return numberOfGroupsLong;
+  }
+  
+  
+  public void setNumGroupsLong(long numberGroupsLong) {
+    this.numberOfGroupsLong = numberGroupsLong;
+  }
   public void addError(SenseiError error) {
     if (errors == null)
       errors = new ArrayList<SenseiError>();

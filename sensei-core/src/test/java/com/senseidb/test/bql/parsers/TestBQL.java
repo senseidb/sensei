@@ -45,8 +45,7 @@ public class TestBQL extends TestCase
   @Test
   public void testDateRange() throws Exception
   {
-    String bql = "select long_id , city, _grouphitscount FROM ucp WHERE tags IN ('nus:category:profile') AND color IN ('linkedin:profile-update', 'linkedin:profile-add', 'linkedin:profile-become', 'linkedin:profile-be-studying') AND " +
-    		"groupid_range >= $startDate AND groupid_range <= $endDate ORDER BY groupid_range ASC limit 0, 500 ROUTE BY \"0\"\n";
+    String bql = "select long_id , city, _grouphitscount FROM ucp ";
     System.out.println(_compiler.compile(bql).toString());
   }
   @Test
@@ -56,7 +55,7 @@ public class TestBQL extends TestCase
     System.out.println("==================================================");
     // No where clause
     JSONObject json = _compiler.compile(
-      "select category /* BLOCK COMMENTS */ " +
+      "select category /* BLOCK COMMENTS *//* " +
       "from cars       -- LINE COMMENTS"
       );
     JSONObject expected = new JSONObject("{\"meta\":{\"select_list\":[\"category\"]}}");
@@ -1038,7 +1037,7 @@ public class TestBQL extends TestCase
     JSONObject json = _compiler.compile(
       "SELECT * " +
       "FROM cars " +
-      "WHERE time BEFORE 3 hours 4 min AGO"
+      "WHERE time BEFORE 3 hours 4 mins AGO"
       );
 
     long timeStamp = Long.parseLong(json.getJSONObject("filter")
@@ -1059,7 +1058,7 @@ public class TestBQL extends TestCase
     JSONObject json = _compiler.compile(
       "SELECT * " +
       "FROM cars " +
-      "WHERE time NOT BEFORE 3 hours 4 min AGO"
+      "WHERE time NOT BEFORE 3 hours 4 mins AGO"
       );
 
     long timeStamp = Long.parseLong(json.getJSONObject("filter")
@@ -1666,6 +1665,107 @@ public class TestBQL extends TestCase
     assertTrue(_comp.isEquals(json, expected));
   }
   @Test
+  public void testAggregationFunction() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT sum(year) , sum(color)" +
+      "FROM cars " +
+      "WHERE color = 'red' ");
+    System.out.println(json);
+    assertEquals("{\"mapReduce\":{\"function\":\"sensei.composite\",\"parameters\":{\"array\":[{\"column\":\"year\",\"mapReduce\":\"sum\"},{\"column\":\"color\",\"mapReduce\":\"sum\"}]}},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  @Test
+  public void testAggregationFunctionWithGroupBy() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT sum(year) , sum(year)" +
+      "FROM cars " +
+      "WHERE color = 'red' GROUP BY color, groupid");
+    System.out.println(json);
+    assertEquals("{\"groupBy\":{\"top\":10},\"mapReduce\":{\"function\":\"sensei.composite\",\"parameters\":{\"array\":[{\"columns\":[\"color\",\"groupid\"],\"function\":\"sum\",\"mapReduce\":\"sensei.groupBy\",\"metric\":\"year\",\"top\":10},{\"columns\":[\"color\",\"groupid\"],\"function\":\"sum\",\"mapReduce\":\"sensei.groupBy\",\"metric\":\"year\",\"top\":10}]}},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  @Test
+  public void testAggregationFunctionWithSingleGroupBy() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT sum(year) " +
+      "FROM cars " +
+      "WHERE color = 'red' GROUP BY color");
+    System.out.println(json);
+    assertEquals("{\"facets\":{\"_sumGroupBy\":{\"expand\":false,\"max\":10,\"minhit\":0,\"properties\":{\"dimension\":\"color\",\"metric\":\"year\"}}},\"groupBy\":{\"top\":10},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  @Test
+  public void testCountFunctionWithSingleGroupBy() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT count(year) " +
+      "FROM cars " +
+      "WHERE color = 'red' GROUP BY color");
+    System.out.println(json);
+    assertEquals("{\"facets\":{\"color\":{\"expand\":false,\"max\":10,\"minhit\":0}},\"groupBy\":{\"top\":10},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  @Test
+  public void testMinFunction() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT min(year) " +
+      "FROM cars " +
+      "WHERE color = 'red'");
+    System.out.println(json);
+    assertEquals("{\"mapReduce\":{\"function\":\"min\",\"parameters\":{\"column\":\"year\",\"mapReduce\":\"min\"}},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  @Test
+  public void testAggregationFunctionWithGroupByWithStar() throws Exception
+  {
+    System.out.println("testAggregationFunctionWithGroupByWithStar");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT sum(year) , count(*)" +
+      "FROM cars " +
+      "WHERE color = 'red' GROUP BY color, groupid");
+    System.out.println(json);
+   assertNotNull(json);
+  }
+  @Test
+  public void testMapReduce() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT *" +
+      "FROM cars " +
+      "WHERE color = 'red' EXECUTE(sensei.max, 'column':'year')");
+    assertEquals("{\"mapReduce\":{\"function\":\"sensei.max\",\"parameters\":{\"column\":\"year\",\"mapReduce\":\"sensei.max\"}},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  
+  @Test
+  public void testMapReduceWithComplexParams() throws Exception
+  {
+    System.out.println("testAggregateFunction");
+    System.out.println("==================================================");
+
+    JSONObject json = _compiler.compile(
+      "SELECT * FROM cars WHERE color = 'red' EXECUTE(com.senseidb.search.req.mapred.CountGroupByMapReduce, {'columns':['groupid', 'color']})");
+    assertEquals("{\"mapReduce\":{\"function\":\"com.senseidb.search.req.mapred.CountGroupByMapReduce\",\"parameters\":{\"columns\":[\"groupid\",\"color\"],\"mapReduce\":\"com.senseidb.search.req.mapred.CountGroupByMapReduce\"}},\"meta\":{\"select_list\":[\"*\"]},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}]}", json.toString());
+  }
+  /*@Test
   public void testRelevanceModelExpressionsWithtemplateMappings() throws Exception
   {
     System.out.println("testRelevanceModelExpressions");
@@ -1695,5 +1795,5 @@ public class TestBQL extends TestCase
     JSONObject json = _compiler.compile(modifiedJson);
     JSONObject expected = new JSONObject("{\"query\":{\"query_string\":{\"query\":\"\",\"relevance\":{\"model\":{\"function_params\":[\"srcid\",\"timeVal\",\"_half_time\",\"coolTag\",\"tags\"],\"facets\":{\"mstring\":[\"tags\"]},\"variables\":{\"int\":[\"srcid\"],\"string\":[\"coolTag\"],\"long\":[\"timeVal\",\"_half_time\"]},\"function\":\"int myInt = 0;     float delta = System.currentTimeMillis() - timeVal;     float t = delta > 0 ? delta : 0;     float numHours = t / (1000 * 3600);     float timeScore = (float) Math.exp(-(numHours/_half_time));     if (tags.contains(coolTag))       return 999999;     int x = 0;     x += 5;     x *= 10;     return timeScore;\"},\"values\":{\"_half_time\":8888,\"timeVal\":9999,\"coolTag\":\"zzz\",\"srcid\":1234}}}},\"selections\":[{\"term\":{\"color\":{\"value\":\"red\"}}}],\"meta\":{\"select_list\":[\"color\",\"year\"]}}");
     assertTrue(_comp.isEquals(json, expected));
-  }
+  }*/
 }

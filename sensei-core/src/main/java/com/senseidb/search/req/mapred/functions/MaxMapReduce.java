@@ -11,7 +11,9 @@ import scala.actors.threadpool.Arrays;
 import com.senseidb.search.req.mapred.CombinerStage;
 import com.senseidb.search.req.mapred.FacetCountAccessor;
 import com.senseidb.search.req.mapred.FieldAccessor;
+import com.senseidb.search.req.mapred.IntArray;
 import com.senseidb.search.req.mapred.SenseiMapReduce;
+import com.senseidb.search.req.mapred.SingleFieldAccessor;
 import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
@@ -20,15 +22,20 @@ public class MaxMapReduce implements SenseiMapReduce<MaxResult, MaxResult> {
   private String column;
 
   @Override
-  public MaxResult map(int[] docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public MaxResult map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
     double max = Double.MIN_VALUE;
     double tmp = 0;
     long uid = 0l;
+    SingleFieldAccessor singleFieldAccessor = accessor.getSingleFieldAccessor(column);
     for (int i =0; i < docIdCount; i++) {
-      tmp = accessor.getDouble(column, docIds[i]);
+      tmp = singleFieldAccessor.getDouble(docIds.get(i));
       if (max < tmp) {       
         max = tmp;
-        uid = uids[docIds[i]];
+        if (uids != null && !(uids.length == 1 && uids[0] == Long.MIN_VALUE)) {
+          uid = uids[docIds.get(i)];
+        } else {
+          uid = docIds.get(i);
+        }
       }
     }
     return new MaxResult(max, uid);
@@ -66,7 +73,10 @@ public class MaxMapReduce implements SenseiMapReduce<MaxResult, MaxResult> {
   public JSONObject render(MaxResult reduceResult) {
     
     try {
-      return new FastJSONObject().put("max", reduceResult.value).put("uid", reduceResult.uid);
+     if (reduceResult == null ) {
+       return new FastJSONObject().put("max", "null");
+     }
+      return new FastJSONObject().put("max",  String.format("%1.5f", reduceResult.value)).put("uid", reduceResult.uid);
     } catch (JSONException ex) {
       throw new RuntimeException(ex);
     }

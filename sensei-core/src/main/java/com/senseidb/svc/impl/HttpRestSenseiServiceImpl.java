@@ -759,12 +759,12 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     SenseiResult result = new SenseiResult();
 
     result.setTid(Long.parseLong(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_TID)));
-    result.setTotalDocs(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_TOTALDOCS));
+    result.setTotalDocsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_TOTALDOCS));
     result.setParsedQuery(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_PARSEDQUERY));
-    result.setNumHits(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMHITS));
+    result.setNumHitsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMHITS));
     if (jsonObj.has(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS))
     {
-      result.setNumGroups(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS));
+      result.setNumGroupsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS));
     }
     result.setTime(Long.parseLong(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_TIME)));
     result.addAll(convertFacetMap(jsonObj.getJSONObject(SenseiSearchServletParams.PARAM_RESULT_FACETS)));

@@ -1,5 +1,6 @@
 package com.senseidb.search.req.mapred.functions;
 
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import java.util.List;
@@ -7,14 +8,16 @@ import java.util.List;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.browseengine.bobo.facets.data.TermNumberList;
 import com.senseidb.search.req.mapred.CombinerStage;
 import com.senseidb.search.req.mapred.FacetCountAccessor;
 import com.senseidb.search.req.mapred.FieldAccessor;
+import com.senseidb.search.req.mapred.IntArray;
 import com.senseidb.search.req.mapred.SenseiMapReduce;
-import com.senseidb.util.JSONUtil.FastJSONArray;
+import com.senseidb.search.req.mapred.SingleFieldAccessor;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
-public class DistinctCountMapReduce implements SenseiMapReduce<LongOpenHashSet, Integer> {
+public class DistinctCountMapReduce implements SenseiMapReduce<IntOpenHashSet, Integer> {
 
   private String column;
 
@@ -28,21 +31,32 @@ public class DistinctCountMapReduce implements SenseiMapReduce<LongOpenHashSet, 
   }
 
   @Override
-  public LongOpenHashSet map(int[] docId, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
-    LongOpenHashSet hashSet = new LongOpenHashSet(docIdCount);
-    for (int i =0; i < docIdCount; i++) {
-      hashSet.add(accessor.getLong(column, docId[i]));
-    }
+  public IntOpenHashSet map(IntArray docId, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+      
+      SingleFieldAccessor singleFieldAccessor = accessor.getSingleFieldAccessor(column);
+      IntOpenHashSet intSet = new IntOpenHashSet();
+      if (!(accessor.getTermValueList(column) instanceof TermNumberList)) {
+          for (int i =0; i < docIdCount; i++) {
+              singleFieldAccessor.get(docId.get(i)).hashCode();
+              intSet.add(singleFieldAccessor.get(docId.get(i)).hashCode());
+          }
+      } else {
+          for (int i =0; i < docIdCount; i++) {
+              singleFieldAccessor.getInteger(docId.get(i));
+              intSet.add(singleFieldAccessor.get(docId.get(i)).hashCode());
+          }
+      }
+      
     
-    return hashSet;
+    return intSet;
   }
 
   @Override
-  public List<LongOpenHashSet> combine(List<LongOpenHashSet> mapResults, CombinerStage combinerStage) {
+  public List<IntOpenHashSet> combine(List<IntOpenHashSet> mapResults, CombinerStage combinerStage) {
     if (mapResults.isEmpty()) {
       return mapResults;
     }
-    LongOpenHashSet ret = mapResults.get(0);
+    IntOpenHashSet ret = mapResults.get(0);
     for (int i = 1; i < mapResults.size(); i++) {
      ret.addAll(mapResults.get(i));
     }
@@ -52,11 +66,11 @@ public class DistinctCountMapReduce implements SenseiMapReduce<LongOpenHashSet, 
   }
 
   @Override
-  public Integer reduce(List<LongOpenHashSet> combineResults) {
+  public Integer reduce(List<IntOpenHashSet> combineResults) {
     if (combineResults.isEmpty()) {
       return 0;
     }
-    LongOpenHashSet ret = combineResults.get(0);
+    IntOpenHashSet ret = combineResults.get(0);
     for (int i = 1; i < combineResults.size(); i++) {
      ret.addAll(combineResults.get(i));
     }

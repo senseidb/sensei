@@ -32,22 +32,13 @@ public class SynchronizedActivityRangeFacetHandler extends ActivityRangeFacetHan
       ActivityPrimitiveValues activityPrimitiveValues) {
     super(facetName, fieldName, compositeActivityManager, activityPrimitiveValues);
   }
-  public static class BoboIndexTrackerInMemory extends BoboIndexTracker {
-   
-  @Override
-  protected boolean isSegmentOnDisk(ZoieSegmentReader zoieSegmentReader) {
-    return true;
-  }
-  }
+  
+  
   @Override
 
   public int[] load(BoboIndexReader reader) throws IOException {
     synchronized(GLOBAL_ACTIVITY_TEST_LOCK) {
-      if (!(compositeActivityManager.getBoboIndexTracker() instanceof BoboIndexTrackerInMemory)) {
-        BoboIndexTrackerInMemory boboIndexTracker = new BoboIndexTrackerInMemory();
-        boboIndexTracker.setSenseiCore(compositeActivityManager.getSenseiCore());
-        compositeActivityManager.setBoboIndexTracker(boboIndexTracker);
-      }
+      
     }
     return super.load(reader);
   }

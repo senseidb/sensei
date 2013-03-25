@@ -26,10 +26,10 @@ import com.senseidb.indexing.activity.deletion.DeletionListener;
 import com.senseidb.plugin.SenseiPluginRegistry;
 import com.senseidb.search.node.SenseiCore;
 
-public class PluggableSearchEngineManager implements DeletionListener, HourglassListener<IndexReader, IndexReader> { 
+public class PluggableSearchEngineManager implements DeletionListener, HourglassListener<IndexReader, IndexReader> {
   private final static Logger logger = Logger.getLogger(PluggableSearchEngineManager.class);
   private ShardingStrategy shardingStrategy;
-  private SenseiCore senseiCore; 
+  private SenseiCore senseiCore;
   private String version;
   private Comparator<String> versionComparator;
   private SenseiSchema senseiSchema;
@@ -38,34 +38,36 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
   private List<PluggableSearchEngine> pluggableEngines = new ArrayList<PluggableSearchEngine>();
   private int maxPartition;
   private boolean acceptEventsForAllPartitions;
- 
+
   public PluggableSearchEngineManager() {
-    
+
   }
+
   public String getOldestVersion() {
-    //as for now lets take into account only zoie persistent version
-     return null;     
+    // as for now lets take into account only zoie persistent version
+    return null;
   }
- 
+
   public boolean acceptEventsForAllPartitions() {
     return acceptEventsForAllPartitions;
   }
-  public final void init(String indexDirectory, int nodeId, SenseiSchema senseiSchema, Comparator<String> versionComparator, SenseiPluginRegistry pluginRegistry, ShardingStrategy shardingStrategy) {
+
+  public final void init(String indexDirectory, int nodeId, SenseiSchema senseiSchema, Comparator<String> versionComparator,
+      SenseiPluginRegistry pluginRegistry, ShardingStrategy shardingStrategy) {
     this.nodeId = nodeId;
     this.senseiSchema = senseiSchema;
     this.versionComparator = versionComparator;
 
     this.pluginRegistry = pluginRegistry;
-    this.shardingStrategy = shardingStrategy;    
-
+    this.shardingStrategy = shardingStrategy;
 
     maxPartition = pluginRegistry.getConfiguration().getInt("sensei.index.manager.default.maxpartition.id", 0) + 1;
-    pluggableEngines = new ArrayList<PluggableSearchEngine>(pluginRegistry.resolveBeansByListKey("sensei.search.pluggableEngines", PluggableSearchEngine.class));
+    pluggableEngines = new ArrayList<PluggableSearchEngine>(pluginRegistry.resolveBeansByListKey("sensei.search.pluggableEngines",
+        PluggableSearchEngine.class));
     if (CompositeActivityManager.activitiesPresent(senseiSchema)) {
       pluggableEngines.add(new CompositeActivityManager());
     }
-    
-    
+
     acceptEventsForAllPartitions = false;
     for (PluggableSearchEngine engine : pluggableEngines) {
       engine.init(indexDirectory, nodeId, senseiSchema, versionComparator, pluginRegistry, shardingStrategy);
@@ -75,8 +77,9 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     }
 
     initVersion(versionComparator);
-    
+
   }
+
   public void initVersion(Comparator<String> versionComparator) {
     List<String> versions = new ArrayList<String>();
     for (PluggableSearchEngine engine : pluggableEngines) {
@@ -93,13 +96,13 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
       }
     }
   }
-  
- 
+
   /**
    * Updates all the corresponding activity columns found in the document
+   * 
    * @param event
    * @param version
-   * @return 
+   * @return
    */
   public JSONObject update(JSONObject event, String version) {
     if (this.version != null && versionComparator.compare(this.version, version) > 0) {
@@ -124,35 +127,37 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     }
     return event;
   }
-  
-  
+
   public void close() {
     for (PluggableSearchEngine pluggableSearchEngine : pluggableEngines) {
       pluggableSearchEngine.stop();
-    } 
+    }
   }
- 
 
-
-
-  /* (non-Javadoc)
-   * @see com.senseidb.indexing.activity.deletion.DeletionListener#onDelete(org.apache.lucene.index.IndexReader, long[])
+  /*
+   * (non-Javadoc)
+   * 
+   * @see
+   * com.senseidb.indexing.activity.deletion.DeletionListener#onDelete(org.apache
+   * .lucene.index.IndexReader, long[])
    */
   @Override
   public void onDelete(IndexReader indexReader, long... uids) {
     for (PluggableSearchEngine pluggableSearchEngine : pluggableEngines) {
       pluggableSearchEngine.onDelete(indexReader, uids);
-    } 
+    }
   }
 
   @Override
-  public void onNewZoie(Zoie<IndexReader, IndexReader> zoie) {    
-    
+  public void onNewZoie(Zoie<IndexReader, IndexReader> zoie) {
+
   }
+
   @Override
-  public void onRetiredZoie(Zoie<IndexReader, IndexReader> zoie) {    
-    
+  public void onRetiredZoie(Zoie<IndexReader, IndexReader> zoie) {
+
   }
+
   @Override
   public void onIndexReaderCleanUp(ZoieIndexReader<IndexReader> indexReader) {
     if (indexReader instanceof ZoieMultiReader) {
@@ -165,19 +170,20 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     } else {
       throw new UnsupportedOperationException("Only segment and multisegment readers can be handled");
     }
-    
+
   }
-  private void handleSegment(ZoieSegmentReader segmentReader) {    
-    onDelete(segmentReader, segmentReader.getUIDArray());      
+
+  private void handleSegment(ZoieSegmentReader segmentReader) {
+    onDelete(segmentReader, segmentReader.getUIDArray());
   }
-  
+
   public void start(SenseiCore senseiCore) {
     this.senseiCore = senseiCore;
     for (PluggableSearchEngine pluggableSearchEngine : pluggableEngines) {
       pluggableSearchEngine.start(senseiCore);
     }
   }
-  
+
   public Set<String> getFieldNames() {
     Set<String> ret = new HashSet<String>();
     for (PluggableSearchEngine pluggableSearchEngine : pluggableEngines) {
@@ -185,7 +191,6 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     }
     return ret;
   }
-  
 
   public List<FacetHandler<?>> createFacetHandlers() {
     List<FacetHandler<?>> ret = new ArrayList<FacetHandler<?>>();
@@ -194,6 +199,7 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     }
     return ret;
   }
+
   public Set<String> getFacetNames() {
     Set<String> ret = new HashSet<String>();
     for (PluggableSearchEngine pluggableSearchEngine : pluggableEngines) {
@@ -205,7 +211,5 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
   public List<PluggableSearchEngine> getPluggableEngines() {
     return pluggableEngines;
   }
-   
+
 }
-
-

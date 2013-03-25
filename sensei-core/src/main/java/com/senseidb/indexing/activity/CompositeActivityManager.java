@@ -60,13 +60,8 @@ public class CompositeActivityManager implements PluggableSearchEngine {
     private SenseiCore senseiCore;
     private PurgeUnusedActivitiesJob purgeUnusedActivitiesJob;
     private Map<String, Set<String>> columnToFacetMapping = new HashMap<String, Set<String>>();
-    private static Counter recoveredIndexInBoboFacetDataCache;
-    private static Counter facetMappingMismatch;
     private ActivityPersistenceFactory activityPersistenceFactory;
-    static {
-      recoveredIndexInBoboFacetDataCache = Metrics.newCounter(new MetricName(CompositeActivityManager.class, "recoveredIndexInBoboFacetDataCache"));
-      facetMappingMismatch =  Metrics.newCounter(new MetricName(CompositeActivityManager.class, "facetMappingMismatch"));
-    }
+   
     private BoboIndexTracker boboIndexTracker;
     
     public CompositeActivityManager(ActivityPersistenceFactory activityPersistenceFactory) {      
@@ -212,7 +207,7 @@ public class CompositeActivityManager implements PluggableSearchEngine {
       if (facets.isEmpty()) {
         return;
       }
-      boboIndexTracker.updateExistingBoboIndexes(uid, index, facets);
+      BoboIndexTracker.updateExistingBoboIndexes(senseiCore, uid, index, facets);
     }
     public CompositeActivityValues getActivityValues() {
       return activityValues;
@@ -268,15 +263,12 @@ public class CompositeActivityManager implements PluggableSearchEngine {
 
   public void start(SenseiCore senseiCore) {
     this.senseiCore = senseiCore;
-    boboIndexTracker = new BoboIndexTracker();
-    boboIndexTracker.setSenseiCore(senseiCore);
     Set<IndexReaderFactory<ZoieIndexReader<BoboIndexReader>>> zoieSystems = new HashSet<IndexReaderFactory<ZoieIndexReader<BoboIndexReader>>>();
     for (int partition : senseiCore.getPartitions()) {
       if (senseiCore.getIndexReaderFactory(partition) != null) {
         zoieSystems.add((IndexReaderFactory<ZoieIndexReader<BoboIndexReader>>) senseiCore.getIndexReaderFactory(partition));
       }
     }
-    senseiCore.getDecorator().addBoboListener(boboIndexTracker);
     int purgeJobFrequencyInMinutes = activityPersistenceFactory.getActivityConfig().getPurgeJobFrequencyInMinutes();
     purgeUnusedActivitiesJob = new PurgeUnusedActivitiesJob(activityValues, senseiCore, purgeJobFrequencyInMinutes * 60 * 1000);
     purgeUnusedActivitiesJob.start();
@@ -349,13 +341,7 @@ public class CompositeActivityManager implements PluggableSearchEngine {
   public PurgeUnusedActivitiesJob getPurgeUnusedActivitiesJob() {
     return purgeUnusedActivitiesJob;
   }
-  public BoboIndexTracker getBoboIndexTracker() {
-    return boboIndexTracker;
-  }
-  public void setBoboIndexTracker(BoboIndexTracker boboIndexTracker) {
-    this.boboIndexTracker = boboIndexTracker;
-    senseiCore.getDecorator().addBoboListener(boboIndexTracker);
-  }
+
   public SenseiCore getSenseiCore() {
     return senseiCore;
   }

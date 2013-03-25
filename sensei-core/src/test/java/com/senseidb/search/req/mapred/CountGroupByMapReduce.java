@@ -1,21 +1,14 @@
 package com.senseidb.search.req.mapred;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.netty.util.internal.ConcurrentHashMap;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import com.senseidb.util.JSONUtil.FastJSONArray;
-import com.senseidb.util.JSONUtil.FastJSONObject;
 
 @SuppressWarnings("unchecked")
 public class CountGroupByMapReduce implements SenseiMapReduce<HashMap<String, IntContainer>, ArrayList<GroupedValue>> {
@@ -33,11 +26,11 @@ public class CountGroupByMapReduce implements SenseiMapReduce<HashMap<String, In
       throw new RuntimeException(ex);
     }
   }
-  public HashMap<String, IntContainer> map(int[] docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public HashMap<String, IntContainer> map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
     HashMap<String, IntContainer> ret = new HashMap<String, IntContainer>();
     int duplicatedUids = 0;
     for (int i = 0; i < docIdCount; i++) {     
-      String key = getKey(columns, accessor, docIds[i]);
+      String key = getKey(columns, accessor, docIds.get(i));
       IntContainer count = ret.get(key);     
      
       if (!ret.containsKey(key)) {
@@ -105,9 +98,9 @@ public class CountGroupByMapReduce implements SenseiMapReduce<HashMap<String, In
     try {
       List<JSONObject> ret = new ArrayList<JSONObject>();
       for (GroupedValue grouped : reduceResult) {
-        ret.add(new FastJSONObject().put(grouped.key, grouped.value));
+        ret.add(new JSONObject().put(grouped.key, grouped.value));
       }
-      return new FastJSONObject().put("groupedCounts", new FastJSONArray(ret));
+      return new JSONObject().put("groupedCounts", new JSONArray(ret));
     } catch (JSONException ex) {
       throw new RuntimeException(ex);
     }
@@ -125,7 +118,7 @@ public class CountGroupByMapReduce implements SenseiMapReduce<HashMap<String, In
    }
    @Override
    public int compareTo(Object o) {
-     return ((GroupedValue) o).value - value;
+     return ((GroupedValue)o).value - value;
    }
    @Override
    public String toString() {

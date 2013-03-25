@@ -123,6 +123,7 @@ import com.browseengine.bobo.api.FacetAccessible;
 import com.browseengine.bobo.api.FacetSpec;
 import com.browseengine.bobo.api.FacetSpec.FacetSortSpec;
 import com.browseengine.bobo.facets.DefaultFacetHandlerInitializerParam;
+import com.senseidb.conf.SenseiFacetHandlerBuilder;
 import com.senseidb.search.req.SenseiError;
 import com.senseidb.search.req.SenseiHit;
 import com.senseidb.search.req.SenseiJSONQuery;
@@ -132,6 +133,7 @@ import com.senseidb.search.req.SenseiResult;
 import com.senseidb.search.req.SenseiSystemInfo;
 import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
+import com.senseidb.util.JSONUtil;
 import com.senseidb.util.RequestConverter;
 
 
@@ -382,6 +384,11 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet
             // UID is already set.
             continue;
           }
+          if (key.equals(SenseiFacetHandlerBuilder.SUM_GROUP_BY_FACET_NAME))
+          {
+            // UID is already set.
+            continue;
+          }
           String[] vals = entry.getValue();
 
           JSONArray valArray = new FastJSONArray();
@@ -459,9 +466,9 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet
   {
     JSONObject jsonObj = new FastJSONObject();
     jsonObj.put(PARAM_RESULT_TID, res.getTid());
-    jsonObj.put(PARAM_RESULT_TOTALDOCS, res.getTotalDocs());
-    jsonObj.put(PARAM_RESULT_NUMHITS, res.getNumHits());
-    jsonObj.put(PARAM_RESULT_NUMGROUPS, res.getNumGroups());
+    jsonObj.put(PARAM_RESULT_TOTALDOCS, res.getTotalDocsLong());
+    jsonObj.put(PARAM_RESULT_NUMHITS, res.getNumHitsLong());
+    jsonObj.put(PARAM_RESULT_NUMGROUPS, res.getNumGroupsLong());
     jsonObj.put(PARAM_RESULT_PARSEDQUERY, res.getParsedQuery());
     addErrors(jsonObj, res);
     SenseiHit[] hits = res.getSenseiHits();
@@ -482,7 +489,11 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet
     jsonObj.put(PARAM_RESULT_TIME, res.getTime());
     jsonObj.put(PARAM_RESULT_FACETS, convert(res.getFacetMap(), req));
     if (req.getMapReduceFunction() != null && res.getMapReduceResult() != null) {
-      jsonObj.put(PARAM_RESULT_MAP_REDUCE, req.getMapReduceFunction().render(res.getMapReduceResult().getReduceResult()));
+      JSONObject mapReduceResult = req.getMapReduceFunction().render(res.getMapReduceResult().getReduceResult());
+      if (!(mapReduceResult instanceof FastJSONObject) && mapReduceResult != null) {
+        mapReduceResult = new FastJSONObject(mapReduceResult.toString());
+      }
+      jsonObj.put(PARAM_RESULT_MAP_REDUCE, mapReduceResult);
     }
    
     return jsonObj;
