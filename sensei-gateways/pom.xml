@@ -1,6 +1,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	
+
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.senseidb</groupId>
@@ -8,7 +8,7 @@
 		<version>1.6.1-SNAPSHOT</version>
 		<relativePath>../sensei-parent/pom.xml</relativePath>
 	</parent>
-	
+
 	<artifactId>sensei-gateways</artifactId>
 	<packaging>jar</packaging>
 	<name>sensei gateways</name>
@@ -17,6 +17,14 @@
 	<!-- Set the compiler to java6 -->
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- 忽略测试 -->
+					<skip>true</skip>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -38,7 +46,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-                <version>2.1.2</version>
+				<version>2.1.2</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -51,7 +59,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.8.1</version>
+				<version>2.8.1</version>
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -62,42 +70,42 @@
 				</executions>
 			</plugin>
 			<plugin>
-		      <artifactId>maven-dependency-plugin</artifactId>
-              <version>2.4</version>
-		      <executions>
-		         <execution>
-		         <phase>package</phase>
-		         <goals>
-		            <goal>copy-dependencies</goal>
-		         </goals>
-		         <configuration>
-		            <outputDirectory>${project.build.directory}/lib</outputDirectory>
-		         </configuration>
-		       </execution>
-		       </executions>
-		    </plugin>
-		    
-            <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
-                <version>1.9</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>revision</goal>
-                         </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <prefix>git</prefix>
-                    <dateFormat>dd.MM.yyyy '@' HH:mm:ss z</dateFormat>
-                    <verbose>true</verbose>
-                    <dotGitDirectory>${project.basedir}/../.git</dotGitDirectory>
-                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
-                    <generateGitPropertiesFilename>src/main/resources/git.properties</generateGitPropertiesFilename>
-                </configuration>
-            </plugin>
-		    
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>2.4</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/lib</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>pl.project13.maven</groupId>
+				<artifactId>git-commit-id-plugin</artifactId>
+				<version>1.9</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<prefix>git</prefix>
+					<dateFormat>dd.MM.yyyy '@' HH:mm:ss z</dateFormat>
+					<verbose>true</verbose>
+					<dotGitDirectory>${project.basedir}/../.git</dotGitDirectory>
+					<generateGitPropertiesFile>true</generateGitPropertiesFile>
+					<generateGitPropertiesFilename>src/main/resources/git.properties</generateGitPropertiesFilename>
+				</configuration>
+			</plugin>
+
 		</plugins>
 	</build>
 
@@ -107,31 +115,28 @@
 	</properties>
 
 	<dependencies>
-	   <dependency>
-	     <groupId>${project.groupId}</groupId>
-	     <artifactId>sensei-core</artifactId>
-	     <version>${project.version}</version>
-	    </dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sensei-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 
-        <dependency>
-         <groupId>com.github.sgroschupf</groupId>
-         <artifactId>zkclient</artifactId>
-         <version>0.1</version>
-        </dependency>
+		<dependency>
+			<groupId>com.github.sgroschupf</groupId>
+			<artifactId>zkclient</artifactId>
+			<version>0.1</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.apache.kafka</groupId>
 			<artifactId>kafka</artifactId>
 			<version>0.7.6</version>
-			 <scope>system</scope>
+			<scope>system</scope>
 			<systemPath>${basedir}/../lib/kafka-0.7.6.jar</systemPath>
-      <!-- exclusions>
-        <exclusion> 
-          <groupId>zkclient</groupId>
-        </exclusion>
-      </exclusions -->
+			<!-- exclusions> <exclusion> <groupId>zkclient</groupId> </exclusion> 
+				</exclusions -->
 		</dependency>
-		
+
 		<dependency>
 			<groupId>commons-configuration</groupId>
 			<artifactId>commons-configuration</artifactId>
@@ -143,19 +148,24 @@
 			<artifactId>json</artifactId>
 			<version>20080701</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.apache.avro</groupId>
 			<artifactId>avro</artifactId>
 			<version>1.4.0</version>
 		</dependency>
-		
+
 		<dependency>
-	        <groupId>org.apache.derby</groupId>
-	        <artifactId>derby</artifactId>
-	        <version>10.8.2.2</version>
-	        <scope>test</scope>
-        </dependency>
-            
+			<groupId>org.apache.derby</groupId>
+			<artifactId>derby</artifactId>
+			<version>10.8.2.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.rabbitmq</groupId>
+			<artifactId>amqp-client</artifactId>
+			<version>2.4.1</version>
+		</dependency>
 	</dependencies>
 </project>
