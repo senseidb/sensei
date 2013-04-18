@@ -183,6 +183,7 @@ public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object
     }
 
 		if (metadataFileName != null && metadataFileName.length() > 0) {
+		    logger.info("MetadataFileName is {}" + metadataFileName);
 			_schema_uri = "file:///" + metadataFileName;
 
 			if (_defaultInterpreter == null) {
