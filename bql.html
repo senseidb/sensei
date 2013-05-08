@@ -1832,4 +1832,13 @@ Results:
 +----------------------+-------+-------------------------+--------+
 10 rows in set, 5301 hits, 15000 total docs (server: 9ms, total: 28ms)
 </pre>
-
+<h3>Query with Sensei map reduce functions:</h3>
+<p>Sensei Map Reduce functions could be executed from BQL. Such functions as sum, avg, count, min, max could be specified in the select clause. They might be used in conjunction with group by clause. For example:</p>
+<pre class="prettyprint">
+select sum(cost), avg(year) where tag='automatic' group by groupid, color
+select distinctCount(year) where tag='manual'
+</pre>
+<p>One could also invoke an arbitrary map reduce function using the 'EXECUTE' clause</p>
+<pre class="prettyprint">
+select from Sensei where color = 'pink' execute(com.senseidb.search.req.mapred.functions.CustomMapReduce, year:2001, myMap:{'limit':1000, 'groupBy':'year'})
+</pre>
