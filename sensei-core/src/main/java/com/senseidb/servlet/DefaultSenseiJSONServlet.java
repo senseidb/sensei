@@ -40,9 +40,9 @@ import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HITS_E
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HITS_EXPL_VALUE;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_DOCID;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_EXPLANATION;
-import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPFIELD;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITS;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITSCOUNT;
+import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPFIELD;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPVALUE;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_SCORE;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_SRC_DATA;
@@ -87,6 +87,15 @@ import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_SYSINFO_NUMDO
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_SYSINFO_SCHEMA;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_SYSINFO_VERSION;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.senseidb.search.req.ErrorType;
+import com.senseidb.util.Pair;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,7 +116,6 @@ import org.apache.commons.configuration.DataConfiguration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.search.SortField;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -131,7 +139,6 @@ import com.senseidb.search.req.SenseiQuery;
 import com.senseidb.search.req.SenseiRequest;
 import com.senseidb.search.req.SenseiResult;
 import com.senseidb.search.req.SenseiSystemInfo;
-import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 import com.senseidb.util.RequestConverter;
 
@@ -146,37 +153,35 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
 
   private static Logger logger = Logger.getLogger(DefaultSenseiJSONServlet.class);
 
-  public static JSONObject convertExpl(SerializableExplanation expl) throws JSONException {
-    JSONObject jsonObject = null;
-    if (expl != null) {
-      jsonObject = new FastJSONObject();
-      jsonObject.put(PARAM_RESULT_HITS_EXPL_VALUE, expl.getValue());
-      String descr = expl.getDescription();
-      jsonObject.put(PARAM_RESULT_HITS_EXPL_DESC, descr == null ? "" : descr);
-      SerializableExplanation[] details = expl.getDetails();
-      if (details != null) {
-        JSONArray detailArray = new FastJSONArray();
-        for (SerializableExplanation detail : details) {
-          JSONObject subObj = convertExpl(detail);
-          if (subObj != null) {
-            detailArray.put(subObj);
-          }
+  public static void writeJSONExpl(JsonGenerator jsonGenerator, SerializableExplanation expl) throws IOException {
+    jsonGenerator.writeStartObject();
+    jsonGenerator.writeNumberField(PARAM_RESULT_HITS_EXPL_VALUE, expl.getValue());
+    String descr = expl.getDescription();
+    jsonGenerator.writeStringField(PARAM_RESULT_HITS_EXPL_DESC, descr == null ? "" : descr);
+    SerializableExplanation[] details = expl.getDetails();
+    if (details != null)
+    {
+      jsonGenerator.writeArrayFieldStart(PARAM_RESULT_HITS_EXPL_DETAILS);
+      for (SerializableExplanation detail : details) {
+        if (detail != null) {
+          writeJSONExpl(jsonGenerator, detail);
         }
-        jsonObject.put(PARAM_RESULT_HITS_EXPL_DETAILS, detailArray);
       }
+      jsonGenerator.writeEndArray();
     }
-
-    return jsonObject;
+    jsonGenerator.writeEndObject();
   }
 
-  public static JSONObject convert(Map<String, FacetAccessible> facetValueMap, SenseiRequest req)
-      throws JSONException {
-    JSONObject resMap = new FastJSONObject();
-    if (facetValueMap != null) {
+  public static void writeJSONFacets(JsonGenerator jsonGenerator, Map<String, FacetAccessible> facetValueMap,
+                                     SenseiRequest req) throws IOException {
+    jsonGenerator.writeObjectFieldStart(PARAM_RESULT_FACETS);
+    if (facetValueMap != null)
+    {
       Set<Entry<String, FacetAccessible>> entrySet = facetValueMap.entrySet();
 
       for (Entry<String, FacetAccessible> entry : entrySet) {
         String fieldname = entry.getKey();
+        jsonGenerator.writeArrayFieldStart(fieldname);
 
         BrowseSelection sel = req.getSelection(fieldname);
         HashSet<String> selectedVals = new HashSet<String>();
@@ -190,16 +195,13 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
         FacetAccessible facetAccessible = entry.getValue();
         List<BrowseFacet> facetList = facetAccessible.getFacets();
 
-        ArrayList<JSONObject> facets = new ArrayList<JSONObject>();
+        ArrayList<Pair<BrowseFacet, Boolean>> allFacets = new ArrayList<Pair<BrowseFacet, Boolean>>(facetList.size());
 
         for (BrowseFacet f : facetList) {
           String fval = f.getValue();
-          if (fval != null && fval.length() > 0) {
-            JSONObject fv = new FastJSONObject();
-            fv.put(PARAM_RESULT_FACET_INFO_COUNT, f.getFacetValueHitCount());
-            fv.put(PARAM_RESULT_FACET_INFO_VALUE, fval);
-            fv.put(PARAM_RESULT_FACET_INFO_SELECTED, selectedVals.remove(fval));
-            facets.add(fv);
+          if (fval != null && fval.length() > 0)
+          {
+            allFacets.add(new Pair<BrowseFacet, Boolean>(f, selectedVals.remove(fval)));
           }
         }
 
@@ -208,41 +210,48 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
           for (String selectedVal : selectedVals) {
             if (selectedVal != null && selectedVal.length() > 0) {
               BrowseFacet selectedFacetVal = facetAccessible.getFacet(selectedVal);
-              JSONObject fv = new FastJSONObject();
-              fv.put(PARAM_RESULT_FACET_INFO_COUNT,
-                selectedFacetVal == null ? 0 : selectedFacetVal.getFacetValueHitCount());
-              String fval = selectedFacetVal == null ? selectedVal : selectedFacetVal.getValue();
-              fv.put(PARAM_RESULT_FACET_INFO_VALUE, fval);
-              fv.put(PARAM_RESULT_FACET_INFO_SELECTED, true);
-              facets.add(fv);
+
+              if (selectedFacetVal != null) {
+                allFacets.add(new Pair<BrowseFacet, Boolean>(selectedFacetVal, true));
+              } else {
+                allFacets.add(new Pair<BrowseFacet, Boolean>(new BrowseFacet(selectedVal, 0), false));
+              }
             }
           }
 
-          // we need to sort it
           FacetSpec fspec = req.getFacetSpec(fieldname);
           assert fspec != null;
-          sortFacets(fieldname, facets, fspec);
+          sortFacets(fieldname, allFacets, fspec);
         }
 
-        resMap.put(fieldname, facets);
+        for (Pair<BrowseFacet, Boolean> facetSelectedPair : allFacets) {
+          jsonGenerator.writeStartObject();
+          jsonGenerator.writeNumberField(PARAM_RESULT_FACET_INFO_COUNT,
+            facetSelectedPair.getFirst().getFacetValueHitCount());
+          jsonGenerator.writeStringField(PARAM_RESULT_FACET_INFO_VALUE, facetSelectedPair.getFirst().getValue());
+          jsonGenerator.writeBooleanField(PARAM_RESULT_FACET_INFO_SELECTED, facetSelectedPair.getSecond());
+          jsonGenerator.writeEndObject();
+        }
+
+        jsonGenerator.writeEndArray();
       }
     }
-    return resMap;
+    jsonGenerator.writeEndObject();
   }
 
-  private static void sortFacets(String fieldName, ArrayList<JSONObject> facets, FacetSpec fspec) {
+  private static void sortFacets(String fieldName, ArrayList<Pair<BrowseFacet, Boolean>> facets, FacetSpec fspec) {
     FacetSortSpec sortSpec = fspec.getOrderBy();
     if (FacetSortSpec.OrderHitsDesc.equals(sortSpec)) {
-      Collections.sort(facets, new Comparator<JSONObject>() {
+      Collections.sort(facets, new Comparator<Pair<BrowseFacet, Boolean>>() {
         @Override
-        public int compare(JSONObject o1, JSONObject o2) {
+        public int compare(Pair<BrowseFacet, Boolean> o1, Pair<BrowseFacet, Boolean> o2) {
           try {
-            int c1 = o1.getInt(PARAM_RESULT_FACET_INFO_COUNT);
-            int c2 = o2.getInt(PARAM_RESULT_FACET_INFO_COUNT);
+            int c1 = o1.getFirst().getFacetValueHitCount();
+            int c2 = o2.getFirst().getFacetValueHitCount();
             int val = c2 - c1;
             if (val == 0) {
-              String s1 = o1.getString(PARAM_RESULT_FACET_INFO_VALUE);
-              String s2 = o1.getString(PARAM_RESULT_FACET_INFO_VALUE);
+              String s1 = o1.getFirst().getValue();
+              String s2 = o2.getFirst().getValue();
               val = s1.compareTo(s2);
             }
             return val;
@@ -253,12 +262,12 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
         }
       });
     } else if (FacetSortSpec.OrderValueAsc.equals(sortSpec)) {
-      Collections.sort(facets, new Comparator<JSONObject>() {
+      Collections.sort(facets, new Comparator<Pair<BrowseFacet, Boolean>>() {
         @Override
-        public int compare(JSONObject o1, JSONObject o2) {
+        public int compare(Pair<BrowseFacet, Boolean> o1, Pair<BrowseFacet, Boolean> o2) {
           try {
-            String s1 = o1.getString(PARAM_RESULT_FACET_INFO_VALUE);
-            String s2 = o1.getString(PARAM_RESULT_FACET_INFO_VALUE);
+            String s1 = o1.getFirst().getValue();
+            String s2 = o2.getFirst().getValue();
             return s1.compareTo(s2);
           } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -272,59 +281,74 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
   }
 
   @Override
-  protected String buildResultString(HttpServletRequest httpReq, SenseiRequest req, SenseiResult res)
-      throws Exception {
-    return supportJsonp(httpReq, buildJSONResultString(req, res));
+  protected void writeResult(HttpServletRequest httpReq, OutputStream ostream, SenseiRequest req,
+                             SenseiResult res) throws IOException {
+    JsonGenerator jsonGenerator = JSON_FACTORY.createGenerator(ostream);
+    jsonGenerator.setCodec(OBJECT_MAPPER);
+
+    initJsonp(httpReq, jsonGenerator);
+
+    writeJSONResult(jsonGenerator, req, res);
+
+    endJsonp(httpReq, jsonGenerator);
+    jsonGenerator.flush();
   }
 
-  private String supportJsonp(HttpServletRequest httpReq, String jsonString) {
+  private boolean initJsonp(HttpServletRequest httpReq, JsonGenerator jsonGenerator) throws IOException {
     String callback = httpReq.getParameter("callback");
     if (callback != null) {
-      return callback + "(" + jsonString + ");";
-    } else {
-      return jsonString;
+      jsonGenerator.writeRaw(callback);
+      jsonGenerator.writeRaw('(');
+      return true;
     }
+    return false;
   }
 
-  public static String buildJSONResultString(SenseiRequest req, SenseiResult res) throws Exception {
-    JSONObject jsonObj = buildJSONResult(req, res);
-    return jsonObj.toString();
+  private boolean endJsonp(HttpServletRequest httpReq, JsonGenerator jsonGenerator) throws IOException {
+    if (httpReq.getParameter("callback") != null) {
+      jsonGenerator.writeRaw(')');
+      return true;
+    }
+    return false;
   }
 
-  public static JSONArray buildJSONHits(SenseiRequest req, SenseiHit[] hits) throws Exception {
+  public static void writeJSONHits(JsonGenerator jsonGenerator, SenseiRequest req, SenseiHit[] hits) throws IOException {
     Set<String> selectSet = req.getSelectSet();
 
-    JSONArray hitArray = new FastJSONArray();
+    jsonGenerator.writeStartArray();
     for (SenseiHit hit : hits) {
       Map<String, String[]> fieldMap = hit.getFieldValues();
 
-      JSONObject hitObj = new FastJSONObject();
+      jsonGenerator.writeStartObject();
       if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_UID)) {
-        hitObj.put(PARAM_RESULT_HIT_UID, hit.getUID());
+        jsonGenerator.writeNumberField(PARAM_RESULT_HIT_UID, hit.getUID());
       }
       if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_DOCID)) {
-        hitObj.put(PARAM_RESULT_HIT_DOCID, hit.getDocid());
+        jsonGenerator.writeNumberField(PARAM_RESULT_HIT_DOCID, hit.getDocid());
       }
       if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_SCORE)) {
-        hitObj.put(PARAM_RESULT_HIT_SCORE, hit.getScore());
+        jsonGenerator.writeNumberField(PARAM_RESULT_HIT_SCORE, hit.getScore());
       }
-      if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_GROUPFIELD)) {
-        hitObj.put(PARAM_RESULT_HIT_GROUPFIELD, hit.getGroupField());
+      if ((selectSet == null || selectSet.contains(PARAM_RESULT_HIT_GROUPFIELD)) && hit.getGroupField() != null) {
+        jsonGenerator.writeStringField(PARAM_RESULT_HIT_GROUPFIELD, hit.getGroupField());
       }
-      if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_GROUPVALUE)) {
-        hitObj.put(PARAM_RESULT_HIT_GROUPVALUE, hit.getGroupValue());
+      if ((selectSet == null || selectSet.contains(PARAM_RESULT_HIT_GROUPVALUE)) && hit.getGroupValue() != null) {
+        jsonGenerator.writeStringField(PARAM_RESULT_HIT_GROUPVALUE, hit.getGroupValue());
       }
       if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_GROUPHITSCOUNT)) {
-        hitObj.put(PARAM_RESULT_HIT_GROUPHITSCOUNT, hit.getGroupHitsCount());
+        jsonGenerator.writeNumberField(PARAM_RESULT_HIT_GROUPHITSCOUNT, hit.getGroupHitsCount());
       }
-      if (hit.getGroupHits() != null && hit.getGroupHits().length > 0) hitObj.put(
-        PARAM_RESULT_HIT_GROUPHITS, buildJSONHits(req, hit.getSenseiGroupHits()));
+      if (hit.getGroupHits() != null && hit.getGroupHits().length > 0) {
+        jsonGenerator.writeFieldName(PARAM_RESULT_HIT_GROUPHITS);
+        writeJSONHits(jsonGenerator, req, hit.getSenseiGroupHits());
+      }
 
       // get fetchStored even if request does not have it because it could be set at the
       // federated broker level
-      if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_SRC_DATA)
-          || req.isFetchStoredFields() || hit.getSrcData() != null) {
-        hitObj.put(PARAM_RESULT_HIT_SRC_DATA, hit.getSrcData());
+      if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_SRC_DATA) || 
+          req.isFetchStoredFields() || hit.getSrcData() != null)
+      {
+        jsonGenerator.writeStringField(PARAM_RESULT_HIT_SRC_DATA, hit.getSrcData());
       }
       if (fieldMap != null) {
         Set<Entry<String, String[]>> entries = fieldMap.entrySet();
@@ -340,123 +364,138 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
           }
           String[] vals = entry.getValue();
 
-          JSONArray valArray = new FastJSONArray();
-          if (vals != null) {
-            for (String val : vals) {
-              valArray.put(val);
-            }
-          }
           if (selectSet == null || selectSet.contains(key)) {
-            hitObj.put(key, valArray);
+            if (vals != null) {
+              jsonGenerator.writeObjectField(key, vals);
+            }
           }
         }
       }
 
       List<SerializableField> fields = hit.getStoredFields();
       if (fields != null) {
-        List<JSONObject> storedData = new ArrayList<JSONObject>();
-        for (SerializableField field : fields) {
-          if (req.getStoredFieldsToFetch() != null
-              && !req.getStoredFieldsToFetch().contains(field.name())) {
-            continue;
-          }
-          // DOCUMENT_STORE_FIELD is already set to _srcdata
-          if (!field.name().equals(AbstractZoieIndexable.DOCUMENT_STORE_FIELD)) {
-            JSONObject data = new FastJSONObject();
-            data.put(PARAM_RESULT_HIT_STORED_FIELDS_NAME, field.name());
-            data.put(PARAM_RESULT_HIT_STORED_FIELDS_VALUE, field.stringValue());
-            storedData.add(data);
-          }
-        }
         if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_STORED_FIELDS)) {
-          hitObj.put(PARAM_RESULT_HIT_STORED_FIELDS, new FastJSONArray(storedData));
+          jsonGenerator.writeArrayFieldStart(PARAM_RESULT_HIT_STORED_FIELDS);
+          for (SerializableField field : fields) {
+            if (!field.name().equals(AbstractZoieIndexable.DOCUMENT_STORE_FIELD) &&
+                (req.getStoredFieldsToFetch() != null
+                 && !req.getStoredFieldsToFetch().contains(field.name()))) {
+              continue;
+            }
+            jsonGenerator.writeStartObject();
+            jsonGenerator.writeStringField(PARAM_RESULT_HIT_STORED_FIELDS_NAME, field.name());
+            jsonGenerator.writeStringField(PARAM_RESULT_HIT_STORED_FIELDS_VALUE, field.stringValue());
+            jsonGenerator.writeEndObject();
+          }
+          jsonGenerator.writeEndArray();
         }
       }
 
       Map<String, List<BoboTerm>> tvMap = hit.getTermVectorMap();
       if (tvMap != null && tvMap.size() > 0) {
-        JSONObject tvObj = new FastJSONObject();
         if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_TERMVECTORS)) {
-          hitObj.put(PARAM_RESULT_HIT_TERMVECTORS, tvObj);
-        }
-        Set<Entry<String, List<BoboTerm>>> entries = tvMap.entrySet();
-        for (Entry<String, List<BoboTerm>> entry : entries) {
-          String field = entry.getKey();
-          JSONArray tvArray = new FastJSONArray();
-          tvObj.put(field, tvArray);
-          List<BoboTerm> boboTerms = entry.getValue();
-          for (int i = 0; i < boboTerms.size(); ++i) {
-            JSONObject tv = new FastJSONObject();
-            tv.put("term", boboTerms.get(i).term);
-            tv.put("freq", boboTerms.get(i).freq);
-            tv.put("positions", boboTerms.get(i).positions);
-            tv.put("startOffsets", boboTerms.get(i).startOffsets);
-            tv.put("endOffsets", boboTerms.get(i).endOffsets);
-            tvArray.put(tv);
+          jsonGenerator.writeObjectFieldStart(PARAM_RESULT_HIT_TERMVECTORS);
+
+          Set<Entry<String, List<BoboTerm>>> entries = tvMap.entrySet();
+          for (Entry<String, List<BoboTerm>> entry : entries) {
+            jsonGenerator.writeArrayFieldStart(entry.getKey());
+            for (BoboTerm term : entry.getValue()) {
+              jsonGenerator.writeStringField("term", term.term);
+              jsonGenerator.writeNumberField("freq", term.freq);
+              jsonGenerator.writeObjectField("positions", term.positions);
+              jsonGenerator.writeObjectField("startOffsets", term.startOffsets);
+              jsonGenerator.writeObjectField("endOffsets", term.endOffsets);
+            }
+            jsonGenerator.writeEndArray();
           }
+
+          jsonGenerator.writeEndObject();
         }
       }
 
       SerializableExplanation expl = hit.getExplanation();
       if (expl != null) {
         if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_EXPLANATION)) {
-          hitObj.put(PARAM_RESULT_HIT_EXPLANATION, convertExpl(expl));
+          jsonGenerator.writeFieldName(PARAM_RESULT_HIT_EXPLANATION);
+          writeJSONExpl(jsonGenerator, expl);
         }
       }
 
-      hitArray.put(hitObj);
+      jsonGenerator.writeEndObject();
     }
-    return hitArray;
+    jsonGenerator.writeEndArray();
   }
 
-  @SuppressWarnings("unchecked")
-  public static JSONObject buildJSONResult(SenseiRequest req, SenseiResult res) throws Exception {
-    JSONObject jsonObj = new FastJSONObject();
-    jsonObj.put(PARAM_RESULT_TID, res.getTid());
-    jsonObj.put(PARAM_RESULT_TOTALDOCS, res.getTotalDocsLong());
-    jsonObj.put(PARAM_RESULT_NUMHITS, res.getNumHitsLong());
-    jsonObj.put(PARAM_RESULT_NUMGROUPS, res.getNumGroupsLong());
-    jsonObj.put(PARAM_RESULT_PARSEDQUERY, res.getParsedQuery());
-    addErrors(jsonObj, res);
+  public static void writeJSONResult(JsonGenerator jsonGenerator, SenseiRequest req, SenseiResult res) throws IOException {
+    jsonGenerator.writeStartObject();
+
+    jsonGenerator.writeNumberField(PARAM_RESULT_TID, res.getTid());
+    jsonGenerator.writeNumberField(PARAM_RESULT_TOTALDOCS, res.getTotalDocsLong());
+    jsonGenerator.writeNumberField(PARAM_RESULT_NUMHITS, res.getNumHitsLong());
+    jsonGenerator.writeNumberField(PARAM_RESULT_NUMGROUPS, res.getNumGroupsLong());
+    jsonGenerator.writeStringField(PARAM_RESULT_PARSEDQUERY, res.getParsedQuery());
+    
     SenseiHit[] hits = res.getSenseiHits();
-    JSONArray hitArray = buildJSONHits(req, hits);
-    jsonObj.put(PARAM_RESULT_HITS, hitArray);
+    jsonGenerator.writeFieldName(PARAM_RESULT_HITS);
+    writeJSONHits(jsonGenerator, req, hits);
 
     List<String> selectList = req.getSelectList();
     if (selectList != null) {
-      JSONArray jsonSelectList = new FastJSONArray();
-      for (String col : selectList) {
-        jsonSelectList.put(col);
+      jsonGenerator.writeArrayFieldStart(PARAM_RESULT_SELECT_LIST);
+      for (String col: selectList) {
+        jsonGenerator.writeString(col);
       }
-      jsonObj.put(PARAM_RESULT_SELECT_LIST, jsonSelectList);
+      jsonGenerator.writeEndArray();
     }
 
-    jsonObj.put(PARAM_RESULT_TIME, res.getTime());
-    jsonObj.put(PARAM_RESULT_FACETS, convert(res.getFacetMap(), req));
+    jsonGenerator.writeNumberField(PARAM_RESULT_TIME, res.getTime());
+
+    writeJSONFacets(jsonGenerator, res.getFacetMap(), req);
+
+    List<SenseiError> senseiErrors = res.getErrors();
+
+    String mapReduceResultString = null;
     if (req.getMapReduceFunction() != null && res.getMapReduceResult() != null) {
-      JSONObject mapReduceResult = req.getMapReduceFunction().render(
+      JSONObject mapReduceResult = null;
+      try {
+        mapReduceResult = req.getMapReduceFunction().render(
         res.getMapReduceResult().getReduceResult());
-      if (!(mapReduceResult instanceof FastJSONObject) && mapReduceResult != null) {
-        mapReduceResult = new FastJSONObject(mapReduceResult.toString());
+        if (mapReduceResult != null) {
+          if (!(mapReduceResult instanceof FastJSONObject) && mapReduceResult != null) {
+            mapReduceResult = new FastJSONObject(mapReduceResult.toString());
+          }
+          mapReduceResultString = mapReduceResult.toString();
+        }      
+      } catch (Exception e) {
+        senseiErrors = new ArrayList<SenseiError>(senseiErrors);
+        senseiErrors.add(new SenseiError(e.getMessage(), ErrorType.JsonParsingError));
       }
-      jsonObj.put(PARAM_RESULT_MAP_REDUCE, mapReduceResult);
     }
+    if (mapReduceResultString != null) {
+      jsonGenerator.writeFieldName(PARAM_RESULT_MAP_REDUCE);
+      jsonGenerator.writeRawValue(mapReduceResultString);
+    }
+    writeJSONErrors(jsonGenerator, senseiErrors);
 
-    return jsonObj;
+    jsonGenerator.writeEndObject();
+    jsonGenerator.flush();
   }
 
-  private static void addErrors(JSONObject jsonResult, SenseiResult res) throws JSONException {
-    JSONArray errorsJson = new FastJSONArray();
-    for (SenseiError error : res.getErrors()) {
-      errorsJson.put(new FastJSONObject().put(PARAM_RESULT_ERROR_MESSAGE, error.getMessage())
-          .put(PARAM_RESULT_ERROR_TYPE, error.getErrorType().name())
-          .put(PARAM_RESULT_ERROR_CODE, error.getErrorCode()));
+  private static void writeJSONErrors(JsonGenerator jsonGenerator, List<SenseiError> errors) throws IOException {
+    jsonGenerator.writeArrayFieldStart(PARAM_RESULT_ERRORS);
+    for (SenseiError error : errors) {
+      jsonGenerator.writeStartObject();
+      jsonGenerator.writeStringField(PARAM_RESULT_ERROR_MESSAGE, error.getMessage());
+      jsonGenerator.writeStringField(PARAM_RESULT_ERROR_TYPE, error.getErrorType().name());
+      jsonGenerator.writeNumberField(PARAM_RESULT_ERROR_CODE, error.getErrorCode());
+      jsonGenerator.writeEndObject();
     }
-    jsonResult.put(PARAM_RESULT_ERRORS, errorsJson);
-    if (res.getErrors().size() > 0) {
-      jsonResult.put(PARAM_RESULT_ERROR_CODE, res.getErrors().get(0).getErrorCode());
+    jsonGenerator.writeEndArray();
+
+    if (errors.size() > 0) {
+      jsonGenerator.writeNumberField(PARAM_RESULT_ERROR_CODE, errors.get(0).getErrorCode());
     } else {
-      jsonResult.put(PARAM_RESULT_ERROR_CODE, 0);
+      jsonGenerator.writeNumberField(PARAM_RESULT_ERROR_CODE, 0);
     }
   }
 
@@ -789,46 +828,67 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
     }
   }
 
+  private static final JsonFactory JSON_FACTORY = new JsonFactory();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   @Override
-  protected String buildResultString(HttpServletRequest httpReq, SenseiSystemInfo info)
-      throws Exception {
+  protected void buildResultString(HttpServletRequest httpReq, OutputStream ostream, SenseiSystemInfo info)
+    throws IOException {
     JSONObject jsonObj = new FastJSONObject();
-    jsonObj.put(PARAM_SYSINFO_NUMDOCS, info.getNumDocs());
-    jsonObj.put(PARAM_SYSINFO_LASTMODIFIED, info.getLastModified());
-    jsonObj.put(PARAM_SYSINFO_VERSION, info.getVersion());
 
+    JsonGenerator jsonGenerator = JSON_FACTORY.createGenerator(ostream);
+    jsonGenerator.setCodec(OBJECT_MAPPER);
+    initJsonp(httpReq, jsonGenerator);
+
+    jsonGenerator.writeStartObject();
+
+    jsonGenerator.writeNumberField(PARAM_SYSINFO_NUMDOCS, info.getNumDocs());
+    jsonGenerator.writeNumberField(PARAM_SYSINFO_LASTMODIFIED, info.getLastModified());
+    jsonGenerator.writeStringField(PARAM_SYSINFO_VERSION, info.getVersion());
+    
     if (info.getSchema() != null && info.getSchema().length() != 0) {
-      jsonObj.put(PARAM_SYSINFO_SCHEMA, new FastJSONObject(info.getSchema()));
-    }
-
-    JSONArray jsonArray = new FastJSONArray();
-    jsonObj.put(PARAM_SYSINFO_FACETS, jsonArray);
-    Set<SenseiSystemInfo.SenseiFacetInfo> facets = info.getFacetInfos();
-    if (facets != null) {
-      for (SenseiSystemInfo.SenseiFacetInfo facet : facets) {
-        JSONObject facetObj = new FastJSONObject();
-        facetObj.put(PARAM_SYSINFO_FACETS_NAME, facet.getName());
-        facetObj.put(PARAM_SYSINFO_FACETS_RUNTIME, facet.isRunTime());
-        facetObj.put(PARAM_SYSINFO_FACETS_PROPS, facet.getProps());
-        jsonArray.put(facetObj);
+      // TODO don't do this!
+      // validate... original behavior reads value into JSONObject then reserializes which would throw an exception
+      try {
+        JsonParser parser = JSON_FACTORY.createParser(info.getSchema());
+        while (parser.nextToken() != null);
+        jsonGenerator.writeFieldName(PARAM_SYSINFO_SCHEMA);
+        jsonGenerator.writeRawValue(info.getSchema());
+      } catch (JsonParseException e) {
+        writeJSONErrors(jsonGenerator, Collections.singletonList(
+          new SenseiError(e.getMessage(), ErrorType.JsonParsingError)));
       }
     }
 
-    jsonArray = new FastJSONArray();
-    jsonObj.put(PARAM_SYSINFO_CLUSTERINFO, jsonArray);
+    jsonGenerator.writeArrayFieldStart(PARAM_SYSINFO_FACETS);
+    Set<SenseiSystemInfo.SenseiFacetInfo> facets = info.getFacetInfos();
+    if (facets != null) {
+        for (SenseiSystemInfo.SenseiFacetInfo facet : facets) {
+          jsonGenerator.writeStartObject();
+          jsonGenerator.writeStringField(PARAM_SYSINFO_FACETS_NAME, facet.getName());
+          jsonGenerator.writeBooleanField(PARAM_SYSINFO_FACETS_RUNTIME, facet.isRunTime());
+          jsonGenerator.writeObjectField(PARAM_SYSINFO_FACETS_PROPS, facet.getProps());
+          jsonGenerator.writeEndObject();
+        }
+    }
+    jsonGenerator.writeEndArray();
+
+    jsonGenerator.writeArrayFieldStart(PARAM_SYSINFO_CLUSTERINFO);
     List<SenseiSystemInfo.SenseiNodeInfo> clusterInfo = info.getClusterInfo();
     if (clusterInfo != null) {
       for (SenseiSystemInfo.SenseiNodeInfo nodeInfo : clusterInfo) {
-        JSONObject nodeObj = new FastJSONObject();
-        nodeObj.put(PARAM_SYSINFO_CLUSTERINFO_ID, nodeInfo.getId());
-        nodeObj.put(PARAM_SYSINFO_CLUSTERINFO_PARTITIONS,
-          new FastJSONArray(Arrays.asList(nodeInfo.getPartitions())));
-        nodeObj.put(PARAM_SYSINFO_CLUSTERINFO_NODELINK, nodeInfo.getNodeLink());
-        nodeObj.put(PARAM_SYSINFO_CLUSTERINFO_ADMINLINK, nodeInfo.getAdminLink());
-        jsonArray.put(nodeObj);
+        jsonGenerator.writeStartObject();
+        jsonGenerator.writeNumberField(PARAM_SYSINFO_CLUSTERINFO_ID, nodeInfo.getId());
+        jsonGenerator.writeObjectField(PARAM_SYSINFO_CLUSTERINFO_PARTITIONS, nodeInfo.getPartitions());
+        jsonGenerator.writeStringField(PARAM_SYSINFO_CLUSTERINFO_NODELINK, nodeInfo.getNodeLink());
+        jsonGenerator.writeStringField(PARAM_SYSINFO_CLUSTERINFO_ADMINLINK, nodeInfo.getAdminLink());
+        jsonGenerator.writeEndObject();
       }
     }
+    jsonGenerator.writeEndArray();
 
-    return supportJsonp(httpReq, jsonObj.toString());
+    jsonGenerator.writeEndObject();
+    endJsonp(httpReq, jsonGenerator);
+    jsonGenerator.flush();
   }
 }

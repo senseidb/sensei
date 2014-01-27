@@ -215,72 +215,75 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
     long numHits = 0, totalDocs = 0;
     RequestContext requestContext = null;
     try {
-      if ("post".equalsIgnoreCase(req.getMethod())) {
-        requestContext = initializeRequestContextBasedOnPostParams(req, resp);
-      } else {
-        requestContext = initContextBasedOnGetParams(req, resp);
-      }
-      if (requestContext == null) {
-        // the error has been already logged
-        return;
-      }
-      if (requestContext.jsonObj != null) {
-        requestContext.bqlStmt = requestContext.jsonObj.optString(BQL_STMT);
-        requestContext.templatesJson = requestContext.jsonObj
-            .optJSONObject(JsonTemplateProcessor.TEMPLATE_MAPPING_PARAM);
-        requestContext.compiledJson = null;
+      SenseiResult res = null;
+      try {
+        if ("post".equalsIgnoreCase(req.getMethod())) {
+          requestContext = initializeRequestContextBasedOnPostParams(req, resp);
+        } else {
+          requestContext = initContextBasedOnGetParams(req, resp);
+        }
+        if (requestContext == null) {
+          //the error has been already logged
+          return;
+        }
+        if (requestContext.jsonObj != null) {
+          requestContext.bqlStmt = requestContext.jsonObj.optString(BQL_STMT);
+          requestContext.templatesJson = requestContext.jsonObj.optJSONObject(JsonTemplateProcessor.TEMPLATE_MAPPING_PARAM);
+          requestContext.compiledJson = null;
+  
+          if (requestContext.bqlStmt.length() > 0) {
+            boolean successfull = handleBqlRequest(req, resp, requestContext);
+            if (!successfull) {
+              return;
+            }
+          } else {
+            // This is NOT a BQL statement
+            requestContext.query = "json=" + requestContext.content;
+            requestContext.compiledJson = requestContext.jsonObj;
+          }
+          if (requestContext.templatesJson != null) {
+            requestContext.compiledJson.put(JsonTemplateProcessor.TEMPLATE_MAPPING_PARAM,
+              requestContext.templatesJson);
+          }
+          List<SenseiError> errors = null;
+          if (postProcessor != null) {
+            errors = postProcessor.process(requestContext.compiledJson);
+          }
+          requestContext.senseiReq = SenseiRequest.fromJSON(requestContext.compiledJson,
+            _facetInfoMap);
+          if (errors != null) {
+            for (SenseiError error : errors) {
+              requestContext.senseiReq.addError(error);
+            }
+          }
+        }
+        res = broker.browse(requestContext.senseiReq);
+        numHits = res.getNumHitsLong();
+        totalDocs = res.getTotalDocsLong();
+      } catch (Exception e) {
+        try {
+          logger.error(e.getMessage(), e);
+          if (e.getCause() != null && e.getCause() instanceof JSONException) {
+            writeEmptyResponse(req, resp, new SenseiError(e.getMessage(), ErrorType.JsonParsingError));
+          } else {
+            writeEmptyResponse(req, resp, new SenseiError(e.getMessage(), ErrorType.InternalError));
+            }
+        } catch (Exception ex) {
+          throw new ServletException(e);
+          }
+        }
 
-        if (requestContext.bqlStmt.length() > 0) {
-          boolean successfull = handleBqlRequest(req, resp, requestContext);
-          if (!successfull) {
-            return;
-          }
-        } else {
-          // This is NOT a BQL statement
-          requestContext.query = "json=" + requestContext.content;
-          requestContext.compiledJson = requestContext.jsonObj;
+      if (res != null) {
+        try {
+          sendResponse(req, resp, requestContext.senseiReq, res);
+        } catch (Exception e) {
+          throw new ServletException(e);
         }
-        if (requestContext.templatesJson != null) {
-          requestContext.compiledJson.put(JsonTemplateProcessor.TEMPLATE_MAPPING_PARAM,
-            requestContext.templatesJson);
-        }
-        List<SenseiError> errors = null;
-        if (postProcessor != null) {
-          errors = postProcessor.process(requestContext.compiledJson);
-        }
-        requestContext.senseiReq = SenseiRequest.fromJSON(requestContext.compiledJson,
-          _facetInfoMap);
-        if (errors != null) {
-          for (SenseiError error : errors) {
-            requestContext.senseiReq.addError(error);
-          }
-        }
-      }
-      SenseiResult res = broker.browse(requestContext.senseiReq);
-      numHits = res.getNumHitsLong();
-      totalDocs = res.getTotalDocsLong();
-      sendResponse(req, resp, requestContext.senseiReq, res);
-    } catch (JSONException e) {
-      try {
-        writeEmptyResponse(req, resp, new SenseiError(e.getMessage(), ErrorType.JsonParsingError));
-      } catch (Exception ex) {
-        throw new ServletException(e);
-      }
-    } catch (Exception e) {
-      try {
-        logger.error(e.getMessage(), e);
-        if (e.getCause() != null && e.getCause() instanceof JSONException) {
-          writeEmptyResponse(req, resp, new SenseiError(e.getMessage(), ErrorType.JsonParsingError));
-        } else {
-          writeEmptyResponse(req, resp, new SenseiError(e.getMessage(), ErrorType.InternalError));
-        }
-      } catch (Exception ex) {
-        throw new ServletException(e);
       }
     } finally {
-      if (queryLogger.isInfoEnabled() && requestContext != null && requestContext.query != null) {
-        queryLogger.info(String.format("hits(%d/%d) took %dms: %s", numHits, totalDocs,
-          System.currentTimeMillis() - time, requestContext.query));
+      if (queryLogger.isInfoEnabled() && requestContext != null && requestContext.query != null)
+      {
+        queryLogger.info(String.format("hits(%d/%d) took %dms: %s", numHits, totalDocs, System.currentTimeMillis() - time, requestContext.query));
       }
     }
   }
@@ -308,7 +311,7 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
   }
 
   public RequestContext initializeRequestContextBasedOnPostParams(HttpServletRequest req,
-      HttpServletResponse resp) throws IOException, Exception {
+      HttpServletResponse resp) throws Exception {
     RequestContext requestContext;
     requestContext = new RequestContext();
     BufferedReader reader = req.getReader();
@@ -337,7 +340,7 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
   }
 
   public boolean handleBqlRequest(HttpServletRequest req, HttpServletResponse resp,
-      RequestContext requestContext) throws Exception, JSONException {
+      RequestContext requestContext) throws Exception {
     try {
       if (requestContext.jsonObj.length() == 1) requestContext.query = "bql="
           + requestContext.bqlStmt;
@@ -428,10 +431,10 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
   }
 
   private void sendResponse(HttpServletRequest req, HttpServletResponse resp,
-      SenseiRequest senseiReq, SenseiResult res) throws Exception {
+      SenseiRequest senseiReq, SenseiResult res) throws IOException {
     long start = System.currentTimeMillis();
     OutputStream ostream = resp.getOutputStream();
-    convertResult(req, senseiReq, res, ostream);
+    writeResult(req, senseiReq, res, ostream);
     ostream.flush();
     queryLogger.info("sendResponse took " + (System.currentTimeMillis() - start) + "ms");
   }
@@ -503,7 +506,7 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
     try {
       SenseiSystemInfo res = _senseiSysBroker.browse(new SenseiRequest());
       OutputStream ostream = resp.getOutputStream();
-      convertResult(req, res, ostream);
+      writeResult(req, res, ostream);
       ostream.flush();
     } catch (Exception e) {
       throw new ServletException(e.getMessage(), e);
@@ -613,11 +616,11 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
     resp.setHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Requested-With, Accept");
   }
 
-  protected abstract void convertResult(HttpServletRequest httpReq, SenseiSystemInfo info,
-      OutputStream ostream) throws Exception;
+  protected abstract void writeResult(HttpServletRequest httpReq, SenseiSystemInfo info, OutputStream ostream)
+    throws IOException;
 
-  protected abstract void convertResult(HttpServletRequest httpReq, SenseiRequest req,
-      SenseiResult res, OutputStream ostream) throws Exception;
+  protected abstract void writeResult(HttpServletRequest httpReq, SenseiRequest req, SenseiResult res,
+                                      OutputStream ostream) throws IOException;
 
   @Override
   public void destroy() {

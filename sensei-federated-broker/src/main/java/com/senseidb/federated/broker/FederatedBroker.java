@@ -1,5 +1,9 @@
 package com.senseidb.federated.broker;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +41,10 @@ public class FederatedBroker implements Broker<SenseiRequest, SenseiResult>{
   private int numThreads = 10;  
   private ExecutorService executor;
   private long timeout = 8000;
-  
+
+  private static final JsonFactory JSON_FACTORY = new JsonFactory();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   private Map<String, String[]> facetInfo = new HashMap<String, String[]>();
   public FederatedBroker() {
   }
@@ -113,11 +120,14 @@ public class FederatedBroker implements Broker<SenseiRequest, SenseiResult>{
       try {
         SenseiRequest senseiRequest = RequestConverter2.fromJSON(request, facetInfo);
         SenseiResult senseiResult = browse(senseiRequest);
-        JSONObject jsonResult = DefaultSenseiJSONServlet.buildJSONResult(senseiRequest, senseiResult);
-        if (jsonResult != null) {
-          numHits = jsonResult.optInt(PARAM_RESULT_NUMHITS);
-          totalDocs = jsonResult.optInt(PARAM_RESULT_TOTALDOCS);
-        }
+        StringWriter stringWriter = new StringWriter();
+        JsonGenerator jsonGenerator = JSON_FACTORY.createGenerator(stringWriter);
+        DefaultSenseiJSONServlet.writeJSONResult(jsonGenerator, senseiRequest, senseiResult);
+        jsonGenerator.flush();
+        JSONObject jsonResult = new JSONObject(stringWriter.toString());
+
+        numHits = jsonResult.optInt(PARAM_RESULT_NUMHITS);
+        totalDocs = jsonResult.optInt(PARAM_RESULT_TOTALDOCS);
         return jsonResult;
       }
       finally {

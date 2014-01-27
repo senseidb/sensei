@@ -1,10 +1,19 @@
 package com.senseidb.test;
 
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -51,11 +60,19 @@ public class TestHttpRestSenseiServiceImpl extends TestCase {
     super(name);
   }
 
-  public void testSenseiResultParsing() throws Exception {
+  public void testSenseiResultParsing() throws Exception
+  {
     SenseiRequest aRequest = createNonRandomSenseiRequest();
     SenseiResult aResult = createMockResultFromRequest(aRequest);
-    JSONObject resultJSONObj = DefaultSenseiJSONServlet.buildJSONResult(aRequest, aResult);
-    SenseiResult bResult = HttpRestSenseiServiceImpl.buildSenseiResult(resultJSONObj);
+    StringWriter stringWriter = new StringWriter();
+    JsonGenerator jsonGenerator = new JsonFactory().createGenerator(stringWriter);
+    jsonGenerator.setCodec(new ObjectMapper());
+
+    DefaultSenseiJSONServlet.writeJSONResult(jsonGenerator, aRequest, aResult);
+    stringWriter.flush();
+    SenseiResult bResult = HttpRestSenseiServiceImpl.buildSenseiResult(
+      HttpRestSenseiServiceImpl.convertStreamToJSONObject(new ByteArrayInputStream(
+        stringWriter.getBuffer().toString().getBytes("UTF-8"))));
     assertEquals(aResult, bResult);
   }
 
