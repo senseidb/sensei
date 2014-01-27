@@ -1,5 +1,6 @@
 package com.senseidb.servlet;
 
+import java.io.IOException;
 import java.io.OutputStream;
 
 import javax.servlet.http.HttpServletRequest;
@@ -26,23 +27,21 @@ public abstract class AbstractSenseiRestServlet extends AbstractSenseiClientServ
     return buildSenseiRequest(params);
   }
 
-  abstract protected String buildResultString(HttpServletRequest httpReq, SenseiRequest req,
-      SenseiResult res) throws Exception;
+  abstract protected void writeResult(HttpServletRequest httpReq, OutputStream ostream,
+      SenseiRequest req, SenseiResult res) throws IOException;
 
-  abstract protected String buildResultString(HttpServletRequest httpReq, SenseiSystemInfo info)
-      throws Exception;
+  abstract protected void buildResultString(HttpServletRequest httpReq, OutputStream ostream,
+      SenseiSystemInfo info) throws IOException;
 
   @Override
-  protected void convertResult(HttpServletRequest httpReq, SenseiSystemInfo info,
-      OutputStream ostream) throws Exception {
-    String outString = buildResultString(httpReq, info);
-    ostream.write(outString.getBytes("UTF-8"));
+  protected void writeResult(HttpServletRequest httpReq, SenseiSystemInfo info,
+      OutputStream ostream) throws IOException {
+    buildResultString(httpReq, ostream, info);
   }
 
   @Override
-  protected void convertResult(HttpServletRequest httpReq, SenseiRequest req, SenseiResult res,
-      OutputStream ostream) throws Exception {
-    String outString = buildResultString(httpReq, req, res);
-    ostream.write(outString.getBytes("UTF-8"));
+  protected void writeResult(HttpServletRequest httpReq, SenseiRequest req, SenseiResult res,
+      OutputStream ostream) throws IOException {
+    writeResult(httpReq, ostream, req, res);
   }
 }
