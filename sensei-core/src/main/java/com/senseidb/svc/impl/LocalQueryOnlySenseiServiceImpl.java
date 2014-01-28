@@ -14,6 +14,8 @@ import proj.zoie.api.indexing.ZoieIndexable;
 import proj.zoie.impl.indexing.SimpleReaderCache;
 import proj.zoie.impl.indexing.ZoieConfig;
 
+import com.senseidb.search.node.DefaultSenseiMultiBrowsableFactory;
+import com.senseidb.search.node.DefaultSenseiSubBrowsableFactory;
 import com.senseidb.search.node.SenseiCore;
 import com.senseidb.search.node.impl.DefaultJsonQueryBuilderFactory;
 import com.senseidb.search.node.impl.DemoZoieSystemFactory;
@@ -44,7 +46,10 @@ public class LocalQueryOnlySenseiServiceImpl implements SenseiService {
         Version.LUCENE_43));
     DefaultJsonQueryBuilderFactory queryBuilderFactory = new DefaultJsonQueryBuilderFactory(
         queryParser);
+    DefaultSenseiSubBrowsableFactory defaultSenseiSubBrowsableFactory = new DefaultSenseiSubBrowsableFactory();
+    DefaultSenseiMultiBrowsableFactory defaultSenseiMultiBrowsableFactory = new DefaultSenseiMultiBrowsableFactory();
     _core = new SenseiCore(1, new int[] { 0 }, zoieFactory, null, queryBuilderFactory,
+        defaultSenseiSubBrowsableFactory, defaultSenseiMultiBrowsableFactory,
         new DefaultFieldAccessorFactory(), zoieFactory.getDecorator());
     _coreService = new CoreSenseiServiceImpl(_core, new MapConfiguration(new HashMap<String, Object>()));
     _core.start();
