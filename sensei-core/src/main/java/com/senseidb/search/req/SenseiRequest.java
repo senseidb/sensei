@@ -57,6 +57,7 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
   private SenseiMapReduce<?, ?> mapReduceFunction;
   private List<SenseiError> errors;
   private Set<String> _storedFieldsToFetch;
+  private Map<String, String> _templateMapping;
 
   public SenseiRequest() {
     _facetInitParamMap = new HashMap<String, FacetHandlerInitializerParam>();
@@ -75,6 +76,7 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
     _storedFieldsToFetch = null;
     _selectList = null;
     _selectSet = null;
+    _templateMapping = null;
   }
 
   public Set<String> getTermVectorsToFetch() {
@@ -92,6 +94,10 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
   public void setStoredFieldsToFetch(Set<String> _storedFieldsToFetch) {
     this._storedFieldsToFetch = _storedFieldsToFetch;
   }
+
+  public Map<String, String> getTemplateMapping() { return _templateMapping; }
+
+  public void setTemplateMapping(Map<String, String> templateMapping) { this._templateMapping = templateMapping; }
 
   /**
   * Get the transaction ID.
@@ -468,6 +474,7 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
     if (_groupBy != null) buf.append("group by: ").append(_groupBy).append('\n');
     buf.append("max per group: ").append(_maxPerGroup).append('\n');
     buf.append("fetch stored fields: ").append(_fetchStoredFields).append('\n');
+    buf.append("template mapping: ").append(_templateMapping).append('\n');
     return buf.toString();
   }
 
@@ -506,6 +513,9 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
       clone.setSelectList(new ArrayList<String>(this.getSelectList()));
     }
     clone.setMapReduceFunction(this.getMapReduceFunction());
+    if (this._templateMapping != null) {
+      clone.setTemplateMapping(new HashMap<String, String>(this._templateMapping));
+    }
 
     return clone;
   }
@@ -536,6 +546,12 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
       if (b.getPartitions() != null) return false;
     } else {
       if (!setsAreEqual(getPartitions(), b.getPartitions())) return false;
+    }
+    if (getTemplateMapping() == null) {
+      if (b.getTemplateMapping() != null) return false;
+    } else {
+      if (b.getTemplateMapping() == null) return false;
+      if (!getTemplateMapping().equals(b.getTemplateMapping())) return false;
     }
 
     return true;

@@ -105,6 +105,8 @@ public class RequestConverter2 {
   private static final String MAP_REDUCE_FUNCTION = "function";
   private static final String MAP_REDUCE_PARAMETERS = "parameters";
 
+  public static final String TEMPLATE_MAPPING = "templateMapping";
+
   private static JsonTemplateProcessor jsonTemplateProcessor = new JsonTemplateProcessor();
 
   public static String[] getStrings(JSONObject obj, String field) {
@@ -399,6 +401,18 @@ public class RequestConverter2 {
 
     String routeParam = json.optString(RequestConverter2.ROUTEPARAM, null);
     req.setRouteParam(routeParam);
+
+    JSONObject templateMapping = json.optJSONObject(RequestConverter2.TEMPLATE_MAPPING);
+    Map<String, String> templateMappingMap = new HashMap<String, String>();
+    if (templateMapping != null) {
+      Iterator<String> iter = (Iterator<String>)templateMapping.keys();
+
+      while (iter.hasNext()) {
+        String key = iter.next();
+        templateMappingMap.put(key, templateMapping.get(key).toString());
+      }
+    }
+    req.setTemplateMapping(templateMappingMap);
 
     return req;
   }
