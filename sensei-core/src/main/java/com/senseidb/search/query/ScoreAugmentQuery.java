@@ -125,7 +125,11 @@ public class ScoreAugmentQuery extends AbstractScoreAdjuster {
   @Override
   protected Scorer createScorer(Scorer innerScorer, AtomicReaderContext context) throws IOException {
     if (context.reader() instanceof BoboSegmentReader) {
-      return new AugmentScorer((BoboSegmentReader) context.reader(), innerScorer, _func.getCopy(), _jsonParam);
+      if (innerScorer != null) {
+        return new AugmentScorer((BoboSegmentReader) context.reader(), innerScorer, _func.getCopy(), _jsonParam);
+      } else {
+        return null;
+      }
     } else {
       throw new IllegalStateException("reader not instance of " + BoboSegmentReader.class);
     }
