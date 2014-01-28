@@ -20,6 +20,8 @@ import proj.zoie.impl.indexing.ZoieConfig;
 import com.browseengine.bobo.api.BoboSegmentReader;
 import com.senseidb.conf.SenseiSchema.FieldDefinition;
 import com.senseidb.indexing.activity.CompositeActivityManager.TimeAggregateInfo;
+import com.senseidb.search.node.DefaultSenseiMultiBrowsableFactory;
+import com.senseidb.search.node.DefaultSenseiSubBrowsableFactory;
 import com.senseidb.search.node.SenseiCore;
 import com.senseidb.search.req.mapred.impl.DefaultFieldAccessorFactory;
 import com.senseidb.test.SenseiStarter;
@@ -80,7 +82,8 @@ public class PurgeUnusedActivitiesJobTest extends TestCase {
     compositeActivityValues.syncWithPersistentVersion(String.format("%08d", valueCount - 1));
     assertEquals(100000, compositeActivityValues.metadata.count);
     SenseiCore senseiCore = new SenseiCore(0, new int[] { 0 }, null, null, null,
-        new DefaultFieldAccessorFactory(), null) {
+        new DefaultSenseiSubBrowsableFactory(), new DefaultSenseiMultiBrowsableFactory(),
+      new DefaultFieldAccessorFactory(), null) {
       @SuppressWarnings("unchecked")
       @Override
       public IndexReaderFactory<BoboSegmentReader> getIndexReaderFactory(int partition) {

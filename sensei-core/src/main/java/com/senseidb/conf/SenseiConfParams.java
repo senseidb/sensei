@@ -44,6 +44,9 @@ public class SenseiConfParams {
   public static final String SENSEI_INDEX_MANAGER = "sensei.index.manager";
   public static final String SENSEI_MAPRED_FACTORY = "sensei.mapreduce.accessor.factory";
   public static final String SENSEI_INDEX_MANAGER_FILTER = "sensei.index.manager.filter";
+  public static final String SENSEI_SUB_BROWSABLE_FACTORY = "sensei.sub.browsable.factory";
+  public static final String SENSEI_BOBO_REQUEST_CONVERTER = "sensei.bobo.request.converter";
+  public static final String SENSEI_MULTI_BROWSABLE_FACTORY = "sensei.multi.browsable.factory";
 
   public static final String SENSEI_GATEWAY = "sensei.gateway";
 

@@ -68,13 +68,17 @@ import com.senseidb.indexing.ShardingStrategy;
 import com.senseidb.indexing.activity.deletion.PurgeFilterWrapper;
 import com.senseidb.jmx.JmxSenseiMBeanServer;
 import com.senseidb.plugin.SenseiPluginRegistry;
+import com.senseidb.search.node.DefaultSenseiMultiBrowsableFactory;
+import com.senseidb.search.node.DefaultSenseiSubBrowsableFactory;
 import com.senseidb.search.node.SenseiCore;
 import com.senseidb.search.node.SenseiHourglassFactory;
 import com.senseidb.search.node.SenseiIndexReaderDecorator;
 import com.senseidb.search.node.SenseiIndexingManager;
+import com.senseidb.search.node.SenseiMultiBrowsableFactory;
 import com.senseidb.search.node.SenseiPairFactory;
 import com.senseidb.search.node.SenseiQueryBuilderFactory;
 import com.senseidb.search.node.SenseiServer;
+import com.senseidb.search.node.SenseiSubBrowsableFactory;
 import com.senseidb.search.node.SenseiZoieFactory;
 import com.senseidb.search.node.SenseiZoieSystemFactory;
 import com.senseidb.search.node.impl.DefaultJsonQueryBuilderFactory;
@@ -489,8 +493,19 @@ public class SenseiServerBuilder {
     if (fieldAccessorFactory == null) {
       fieldAccessorFactory = new DefaultFieldAccessorFactory();
     }
+    SenseiSubBrowsableFactory senseiSubBrowsableFactory = pluginRegistry.getBeanByFullPrefix(
+        SenseiConfParams.SENSEI_SUB_BROWSABLE_FACTORY, SenseiSubBrowsableFactory.class);
+    if (senseiSubBrowsableFactory == null) {
+      senseiSubBrowsableFactory = new DefaultSenseiSubBrowsableFactory();
+    }
+    SenseiMultiBrowsableFactory senseiMultiBrowsableFactory = pluginRegistry.getBeanByFullPrefix(
+        SenseiConfParams.SENSEI_MULTI_BROWSABLE_FACTORY, SenseiMultiBrowsableFactory.class);
+    if (senseiMultiBrowsableFactory == null) {
+      senseiMultiBrowsableFactory = new DefaultSenseiMultiBrowsableFactory();
+    }
     SenseiCore senseiCore = new SenseiCore(nodeid, partitions, zoieSystemFactory, indexingManager,
-        queryBuilderFactory, fieldAccessorFactory, decorator);
+        queryBuilderFactory, senseiSubBrowsableFactory, senseiMultiBrowsableFactory,
+        fieldAccessorFactory, decorator);
     senseiCore.setSystemInfo(sysInfo);
     SenseiIndexPruner indexPruner = pluginRegistry.getBeanByFullPrefix(
       SenseiConfParams.SENSEI_INDEX_PRUNER, SenseiIndexPruner.class);

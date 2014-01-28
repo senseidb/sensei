@@ -20,11 +20,11 @@ import zu.finagle.serialize.ZuSerializer;
 
 import com.browseengine.bobo.api.BoboBrowser;
 import com.browseengine.bobo.api.BoboSegmentReader;
+import com.browseengine.bobo.api.Browsable;
 import com.browseengine.bobo.api.BrowseException;
 import com.browseengine.bobo.api.BrowseHit;
 import com.browseengine.bobo.api.BrowseRequest;
 import com.browseengine.bobo.api.BrowseResult;
-import com.browseengine.bobo.api.MultiBoboBrowser;
 import com.browseengine.bobo.sort.SortCollector;
 import com.senseidb.indexing.SenseiIndexPruner;
 import com.senseidb.indexing.SenseiIndexPruner.IndexReaderSelector;
@@ -63,7 +63,7 @@ public class CoreSenseiServiceImpl extends AbstractSenseiCoreService<SenseiReque
     super(core, conf);
   }
 
-  private SenseiResult browse(SenseiRequest senseiRequest, MultiBoboBrowser browser,
+  private SenseiResult browse(SenseiRequest senseiRequest, Browsable browser,
       BrowseRequest req) throws BrowseException {
 
     final SenseiResult result = new SenseiResult();
@@ -164,9 +164,9 @@ public class CoreSenseiServiceImpl extends AbstractSenseiCoreService<SenseiReque
 
   @Override
   public SenseiResult handlePartitionedRequest(final SenseiRequest request,
-      final List<BoboSegmentReader> readerList, SenseiQueryBuilderFactory queryBuilderFactory)
-      throws Exception {
-    MultiBoboBrowser browser = null;
+    final List<BoboSegmentReader> readerList, SenseiQueryBuilderFactory queryBuilderFactory)
+    throws Exception {
+    Browsable browser = null;
 
     try {
       if (readerList != null && readerList.size() > 0) {
@@ -196,7 +196,9 @@ public class CoreSenseiServiceImpl extends AbstractSenseiCoreService<SenseiReque
 
         pruner.sort(validatedSegmentReaders);
 
-        browser = new MultiBoboBrowser(BoboBrowser.createBrowsables(validatedSegmentReaders));
+        Browsable[] subBrowsers = _core.getSubBrowsableFactory().createBrowsables(validatedSegmentReaders, _core,
+          request);
+        browser = _core.getMultiBrowsableFactory().createBrowsable(subBrowsers, _core, request);
         BrowseRequest breq = RequestConverter.convert(request, queryBuilderFactory);
         if (request.getMapReduceFunction() != null) {
           SenseiMapFunctionWrapper mapWrapper = new SenseiMapFunctionWrapper(

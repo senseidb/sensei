@@ -45,13 +45,20 @@ public class SenseiCore {
 
   private final FieldAccessorFactory fieldAccessorFactory;
 
+  private final SenseiSubBrowsableFactory _subBrowsableFactory;
+
+  private final SenseiMultiBrowsableFactory _multiBrowsableFactory;
+
   public SenseiCore(int id, int[] partitions, SenseiZoieFactory<?> zoieSystemFactory,
       SenseiIndexingManager<?> indexManager, SenseiQueryBuilderFactory queryBuilderFactory,
+      SenseiSubBrowsableFactory subBrowsableFactory, SenseiMultiBrowsableFactory multiBrowsableFactory,
       FieldAccessorFactory fieldAccessorFactory, SenseiIndexReaderDecorator decorator) {
 
     _zoieFactory = zoieSystemFactory;
     _indexManager = indexManager;
     _queryBuilderFactory = queryBuilderFactory;
+    _subBrowsableFactory = subBrowsableFactory;
+    _multiBrowsableFactory = multiBrowsableFactory;
     _partitions = partitions;
     _id = id;
     this.fieldAccessorFactory = fieldAccessorFactory;
@@ -222,4 +229,11 @@ public class SenseiCore {
     return fieldAccessorFactory;
   }
 
+  public SenseiSubBrowsableFactory getSubBrowsableFactory() {
+    return _subBrowsableFactory;
+  }
+
+  public SenseiMultiBrowsableFactory getMultiBrowsableFactory() {
+    return _multiBrowsableFactory;
+  }
 }
