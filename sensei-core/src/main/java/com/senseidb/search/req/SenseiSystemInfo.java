@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class SenseiSystemInfo implements AbstractSenseiResult {
+public class SenseiSystemInfo implements AbstractSenseiResult<SenseiExecStats> {
 
   public static class SenseiFacetInfo implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -113,6 +113,7 @@ public class SenseiSystemInfo implements AbstractSenseiResult {
   private Set<SenseiFacetInfo> _facetInfos;
   private String _schema; /* JSONObject is not protobuf serializerable, we use string here. */
   private List<SenseiNodeInfo> _clusterInfo;
+  private Map<String, SenseiExecStats> partitionExecStats;
 
   private List<SenseiError> errors;
 
@@ -133,6 +134,11 @@ public class SenseiSystemInfo implements AbstractSenseiResult {
   @Override
   public void setTime(long searchTimeMillis) {
     _searchTimeMillis = searchTimeMillis;
+  }
+
+  @Override
+  public SenseiExecStats getExecStats() {
+    return new SenseiExecStats(getTime());
   }
 
   public int getNumDocs() {
@@ -197,8 +203,18 @@ public class SenseiSystemInfo implements AbstractSenseiResult {
   }
 
   @Override
+  public Map<String, SenseiExecStats> getPartitionExecStats() {
+    return partitionExecStats;
+  }
+
+  @Override
+  public void setPartitionExecStats(Map<String, SenseiExecStats> partitionExecStats) {
+    this.partitionExecStats = partitionExecStats;
+  }
+
+  @Override
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     buf.append("\t- Number of Documents: ").append(_numDocs);
     buf.append("\n\t- Last Modified: ").append(
       new SimpleDateFormat("EEE, MMM d, ''yy").format(new Date(_lastModified)));

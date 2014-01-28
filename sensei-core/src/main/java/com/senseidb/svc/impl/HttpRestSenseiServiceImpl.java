@@ -1,5 +1,7 @@
 package com.senseidb.svc.impl;
 
+
+import com.senseidb.search.req.SenseiRequestExecStats;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,9 +24,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
-
 import javax.net.ssl.SSLHandshakeException;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -82,6 +82,7 @@ import com.senseidb.search.req.SenseiSystemInfo;
 import com.senseidb.servlet.SenseiSearchServletParams;
 import com.senseidb.svc.api.SenseiException;
 import com.senseidb.svc.api.SenseiService;
+import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
 public class HttpRestSenseiServiceImpl implements SenseiService {
@@ -668,6 +669,8 @@ public class HttpRestSenseiServiceImpl implements SenseiService {
     result.setTid(Long.parseLong(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_TID)));
     result.setTotalDocsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_TOTALDOCS));
     result.setParsedQuery(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_PARSEDQUERY));
+    result.setPartitionExecStats(
+      convertPartitionExecStats(jsonObj.getJSONObject(SenseiSearchServletParams.PARAM_RESULT_PARTITION_EXEC_STATS)));
     result.setNumHitsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMHITS));
     if (jsonObj.has(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS)) {
       result.setNumGroupsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS));
@@ -763,6 +766,22 @@ public class HttpRestSenseiServiceImpl implements SenseiService {
 
     return clusterInfo;
   }
+
+ private static Map<String, SenseiRequestExecStats> convertPartitionExecStats(JSONObject jsonObject)
+   throws JSONException {
+   Map<String, SenseiRequestExecStats> map = new HashMap<String, SenseiRequestExecStats>();
+
+   Iterator iter = jsonObject.sortedKeys();
+
+   while (iter.hasNext()) {
+     String key = (String) iter.next();
+     JSONObject stats = jsonObject.getJSONObject(key);
+     long time = stats.getLong("time");
+     int numResults = stats.getInt("resultCount");
+     map.put(key, new SenseiRequestExecStats(time, numResults));
+   }
+   return map;
+ }
 
   private static Map<String, FacetAccessible> convertFacetMap(JSONObject jsonObject)
       throws JSONException {
