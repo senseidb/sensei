@@ -40,8 +40,9 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
   private int _count;
   private int _origOffset;
   private int _origCount;
-  private boolean _fetchStoredFields;
-  private boolean _origFetchStoredFields;
+  private boolean _fetchAllStoredFields;
+  private boolean _origFetchAllStoredFields;
+  private boolean _fetchStoredValue;
   private Map<String, FacetHandlerInitializerParam> _facetInitParamMap;
   private Set<Integer> _partitions;
   private boolean _showExplanation;
@@ -63,7 +64,8 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
     _selections = new HashMap<String, BrowseSelection>();
     _sortSpecs = new ArrayList<SerializableSortField>();
     _facetSpecMap = new HashMap<String, FacetSpec>();
-    _fetchStoredFields = false;
+    _fetchAllStoredFields = false;
+    _fetchStoredValue = false;
     _partitions = null;
     _showExplanation = false;
     _routeParam = null;
@@ -204,7 +206,7 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
   public void saveState() {
     _origOffset = _offset;
     _origCount = _count;
-    _origFetchStoredFields = _fetchStoredFields;
+    _origFetchAllStoredFields = _fetchAllStoredFields;
     if (_origFacetSpecMaxCounts == null && _facetSpecMap != null) {
       _origFacetSpecMaxCounts = new HashMap<String, Integer>();
       for (Map.Entry<String, FacetSpec> entry : _facetSpecMap.entrySet()) {
@@ -219,7 +221,7 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
   public void restoreState() {
     _offset = _origOffset;
     _count = _origCount;
-    _fetchStoredFields = _origFetchStoredFields;
+    _fetchAllStoredFields = _origFetchAllStoredFields;
     if (_facetSpecMap != null) {
       for (Map.Entry<String, FacetSpec> entry : _facetSpecMap.entrySet()) {
         FacetSpec spec = entry.getValue();
@@ -252,12 +254,20 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
     _sortSpecs.clear();
   }
 
-  public boolean isFetchStoredFields() {
-    return _fetchStoredFields;
+  public boolean isFetchAllStoredFields() {
+    return _fetchAllStoredFields;
   }
 
-  public void setFetchStoredFields(boolean fetchStoredFields) {
-    _fetchStoredFields = fetchStoredFields;
+  public void setFetchAllStoredFields(boolean fetchAllStoredFields) {
+    _fetchAllStoredFields = fetchAllStoredFields;
+  }
+
+  public boolean isFetchStoredValue(){
+    return _fetchStoredValue;
+  }
+
+  public void setFetchStoredValue(boolean fetchStoredValue) {
+    _fetchStoredValue = fetchStoredValue;
   }
 
   /**
@@ -467,7 +477,9 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
     if (_routeParam != null) buf.append("route param: ").append(_routeParam).append('\n');
     if (_groupBy != null) buf.append("group by: ").append(_groupBy).append('\n');
     buf.append("max per group: ").append(_maxPerGroup).append('\n');
-    buf.append("fetch stored fields: ").append(_fetchStoredFields).append('\n');
+    buf.append("fetch all stored fields: ").append(_fetchAllStoredFields).append('\n');
+    buf.append("stored fields to fetch: ").append(_storedFieldsToFetch).append('\n');
+    buf.append("fetch stored value: ").append(_fetchStoredValue).append('\n');
     return buf.toString();
   }
 
@@ -492,7 +504,8 @@ public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
     clone.setQuery(this.getQuery());
     clone.setOffset(this.getOffset());
     clone.setCount(this.getCount());
-    clone.setFetchStoredFields(this.isFetchStoredFields());
+    clone.setFetchAllStoredFields(this.isFetchAllStoredFields());
+    clone.setFetchStoredValue(this.isFetchStoredValue());
     clone.setFacetHandlerInitParamMap(this.getFacetHandlerInitParamMap());
     clone.setPartitions(this.getPartitions());
     clone.setShowExplanation(this.isShowExplanation());

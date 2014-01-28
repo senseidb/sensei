@@ -47,9 +47,16 @@ public class SenseiClientRequest {
   private final List<Object> sort = new ArrayList<Object>();
   private final Map<String, Facet> facets = new HashMap<String, Facet>();
   /**
-   * Flag indicating whether stored fields are to be fetched
+   * Flag indicating whether all stored fields are to be fetched
    */
-  private boolean fetchStored;
+  private boolean fetchAllStoredFields;
+  /**
+   * Flag indicating whether the stored value is to be fetched
+   */
+  private boolean fetchStoredValue;
+  /**
+   * Stored fields to fetch
+   */
   private List<String> fieldsToFetch;
   private final List<String> termVectors = new ArrayList<String>();
   /**
@@ -95,8 +102,13 @@ public class SenseiClientRequest {
       return this;
     }
 
-    public Builder fetchStored(boolean fetchStored) {
-      request.fetchStored = fetchStored;
+    public Builder fetchAllStoredFields(boolean fetchAllStoredFields) {
+      request.fetchAllStoredFields = fetchAllStoredFields;
+      return this;
+    }
+
+    public Builder fetchStoredValue(boolean fetchStoredValue) {
+      request.fetchStoredValue = fetchStoredValue;
       return this;
     }
 
@@ -244,8 +256,12 @@ public class SenseiClientRequest {
     return facets;
   }
 
-  public boolean isFetchStored() {
-    return fetchStored;
+  public boolean isFetchAllStoredFields() {
+    return fetchAllStoredFields;
+  }
+
+  public boolean isFetchStoredValue() {
+    return fetchStoredValue;
   }
 
   public List<String> getTermVectors() {

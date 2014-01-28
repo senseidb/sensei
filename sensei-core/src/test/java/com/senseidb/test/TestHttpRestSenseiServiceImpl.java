@@ -44,7 +44,7 @@ import com.senseidb.util.JSONUtil.FastJSONObject;
 public class TestHttpRestSenseiServiceImpl extends TestCase {
   private static final int EXPECTED_COUNT = 72;
   private static final int EXPECTED_OFFSET = 227;
-  private static final boolean EXPECTED_FETCH_STORED_FIELDS = true;
+  private static final boolean EXPECTED_FETCH_ALL_STORED_FIELDS = true;
   private static final boolean EXPECTED_SHOW_EXPLANATION = true;
 
   public TestHttpRestSenseiServiceImpl(String name) {
@@ -195,7 +195,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase {
 
     aRequest.setCount(EXPECTED_COUNT);
     aRequest.setOffset(EXPECTED_OFFSET);
-    aRequest.setFetchStoredFields(EXPECTED_FETCH_STORED_FIELDS);
+    aRequest.setFetchAllStoredFields(EXPECTED_FETCH_ALL_STORED_FIELDS);
     aRequest.setShowExplanation(EXPECTED_SHOW_EXPLANATION);
 
     SenseiRequest bRequest = new SenseiRequest();
@@ -332,7 +332,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase {
   void createScalarValues(SenseiRequest req) {
     req.setCount(EXPECTED_COUNT);
     req.setOffset(EXPECTED_OFFSET);
-    req.setFetchStoredFields(EXPECTED_FETCH_STORED_FIELDS);
+    req.setFetchAllStoredFields(EXPECTED_FETCH_ALL_STORED_FIELDS);
     req.setShowExplanation(EXPECTED_SHOW_EXPLANATION);
   }
 

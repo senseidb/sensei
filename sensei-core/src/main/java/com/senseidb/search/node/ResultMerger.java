@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.apache.lucene.document.DocumentStoredFieldVisitor;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.SortField;
@@ -72,22 +73,31 @@ public class ResultMerger {
       }
       ZoieSegmentReader<?> zoieSegmentReader = (ZoieSegmentReader<?>) innerReader;
       SenseiHit hit = new SenseiHit();
-      if (req.isFetchStoredFields()) {
+
+      if (req.isFetchAllStoredFields()) {
         try {
           hit.setStoredFields(reader.document(doc));
         } catch (Exception e) {
           logger.error(e.getMessage(), e);
         }
+      } else if (req.getStoredFieldsToFetch() != null && !req.getStoredFieldsToFetch().isEmpty()) {
+        try {
+          DocumentStoredFieldVisitor visitor = new DocumentStoredFieldVisitor(req.getStoredFieldsToFetch());
+          reader.document(doc, visitor);
+          hit.setStoredFields(visitor.getDocument());
+        } catch(Exception e) {
+          logger.error(e.getMessage(),e);
+        }
       }
 
-      if (req.isFetchStoredFields()) {
+      if (req.isFetchStoredValue()) {
         try {
           BytesRef bytesRef = zoieSegmentReader.getStoredValue(doc);
           if (bytesRef != null) {
             hit.setStoredValue(bytesRef.bytes);
           }
         } catch (Exception e) {
-          logger.error("Exception in getSenseiHit", e);
+          logger.error("Exception fetching stored value in getSenseiHit", e);
         }
       }
 

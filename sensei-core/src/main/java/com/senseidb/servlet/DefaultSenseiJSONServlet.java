@@ -17,7 +17,8 @@ import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FACET_MINHIT;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FACET_ORDER;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FACET_ORDER_HITS;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FACET_ORDER_VAL;
-import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FETCH_STORED;
+import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FETCH_ALL_STORED_FIELDS;
+import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FETCH_STORED_VALUE;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FETCH_TERMVECTOR;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_FIELDS_TO_FETCH;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_GROUP_BY;
@@ -322,8 +323,10 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
 
       // get fetchStored even if request does not have it because it could be set at the
       // federated broker level
-      if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_SRC_DATA)
-          || req.isFetchStoredFields() || hit.getSrcData() != null) {
+      if (selectSet == null || selectSet.contains(PARAM_RESULT_HIT_SRC_DATA) ||
+        req.isFetchAllStoredFields() ||
+        (req.getStoredFieldsToFetch() != null && !req.getStoredFieldsToFetch().isEmpty()) || hit.getSrcData() != null)
+      {
         hitObj.put(PARAM_RESULT_HIT_SRC_DATA, hit.getSrcData());
       }
       if (fieldMap != null) {
@@ -518,7 +521,8 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
     senseiReq.setOffset(params.getInt(PARAM_OFFSET, 0));
     senseiReq.setCount(params.getInt(PARAM_COUNT, 10));
     senseiReq.setShowExplanation(params.getBoolean(PARAM_SHOW_EXPLAIN, false));
-    senseiReq.setFetchStoredFields(params.getBoolean(PARAM_FETCH_STORED, false));
+    senseiReq.setFetchAllStoredFields(params.getBoolean(PARAM_FETCH_ALL_STORED_FIELDS, false));
+    senseiReq.setFetchStoredValue(params.getBoolean(PARAM_FETCH_STORED_VALUE, false));
 
     String[] fetchTVs = params.getStringArray(PARAM_FETCH_TERMVECTOR);
     if (fetchTVs != null && fetchTVs.length > 0) {

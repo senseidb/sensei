@@ -87,7 +87,7 @@ public class BrowseRequestBuilder {
     _req = new SenseiRequest();
     _req.setOffset(0);
     _req.setCount(5);
-    _req.setFetchStoredFields(true);
+    _req.setFetchAllStoredFields(true);
   }
 
   public void clearSelections() {

@@ -453,12 +453,18 @@ public abstract class AbstractSenseiClientServlet extends ZookeeperConfigurableS
         if (jsonString != null) ids = new FastJSONArray(jsonString);
       }
 
+      boolean includeFields = req.getParameter("fields") == null ||
+        Boolean.TRUE.toString().equalsIgnoreCase(req.getParameter("fields"));
+      boolean includeValue = req.getParameter("value") == null ||
+        Boolean.TRUE.toString().equalsIgnoreCase(req.getParameter("value"));
+
       query = "get=" + String.valueOf(ids);
 
       String[] vals = RequestConverter2.getStrings(ids);
       if (vals != null && vals.length != 0) {
         senseiReq = new SenseiRequest();
-        senseiReq.setFetchStoredFields(true);
+        senseiReq.setFetchAllStoredFields(includeFields);
+        senseiReq.setFetchStoredValue(includeValue);
         senseiReq.setCount(vals.length);
         BrowseSelection sel = new BrowseSelection(SenseiFacetHandlerBuilder.UID_FACET_NAME);
         sel.setValues(vals);

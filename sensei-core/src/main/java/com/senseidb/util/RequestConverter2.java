@@ -87,7 +87,7 @@ public class RequestConverter2 {
   public static final String SORT_SCORE = "_score";
   public static final String SORT_RELEVANCE = "relevance";
 
-  public static final String FETCH_STORED = "fetchStored";
+  public static final String FETCH_ALL_STORED_FIELDS = "fetchAllStoredFields";
   public static final String FIELDS_TO_FETCH = "fieldsToFetch";
 
   public static final String FETCH_STORED_VALUE = "fetchStoredValue";
@@ -380,8 +380,11 @@ public class RequestConverter2 {
 
     // other
 
-    boolean fetchStored = json.optBoolean(RequestConverter2.FETCH_STORED);
-    req.setFetchStoredFields(fetchStored);
+    boolean fetchStoredValue = json.optBoolean(RequestConverter2.FETCH_STORED_VALUE);
+    req.setFetchStoredValue(fetchStoredValue);
+
+    boolean fetchStored = json.optBoolean(RequestConverter2.FETCH_ALL_STORED_FIELDS);
+    req.setFetchAllStoredFields(fetchStored);
 
     String[] fieldsToFetch = getStrings(json, RequestConverter2.FIELDS_TO_FETCH);
     if (fieldsToFetch != null && fieldsToFetch.length > 0) {

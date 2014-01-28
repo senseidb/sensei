@@ -15,7 +15,7 @@ public class SendRawQuery {
     SenseiClientRequest senseiRequest = SenseiClientRequest
         .builder()
         .paging(10, 0)
-        .fetchStored(true)
+        .fetchAllStoredFields(true)
         .addSelection(
           Selection.terms("color", Arrays.asList("red", "blue"), Collections.<String> emptyList(),
             Operator.or)).build();

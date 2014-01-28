@@ -1195,7 +1195,7 @@ public class TestSensei extends TestCase {
   }
 
   public static JSONObject searchGet(JSONArray req) throws Exception {
-    return search(new URL(SenseiStarter.SenseiUrl.toString() + "/get"), req.toString());
+    return search(new URL(SenseiStarter.SenseiUrl.toString() + "/get?fields=false&value=true"), req.toString());
   }
 
   public static JSONObject search(URL url, String req) throws Exception {
