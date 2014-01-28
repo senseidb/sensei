@@ -96,4 +96,6 @@ public interface SenseiSearchServletParams {
   public static final String PARAM_RESULT_FACET_INFO_VALUE = "value";
   public static final String PARAM_RESULT_FACET_INFO_COUNT = "count";
   public static final String PARAM_RESULT_FACET_INFO_SELECTED = "selected";
+
+  public static final String PARAM_RESULT_PARTITION_EXEC_STATS = "partitionExecStats";
 }

@@ -19,6 +19,7 @@ public class SenseiResult {
   private String parsedQuery;
   private Long time;
   private Map<String, List<FacetResult>> facets;
+  private Map<String, SenseiRequestExecStatus> partitionExecStats;
 
   private JSONObject mapReduceResult;
   private Integer errorCode;
@@ -42,7 +43,13 @@ public class SenseiResult {
   public Integer getTotaldocs() {
     return totaldocs;
   }
+    public Map<String, SenseiRequestExecStatus> getPartitionExecStats() {
+        return partitionExecStats;
+    }
 
+    public void setPartitionExecStats(Map<String, SenseiRequestExecStatus> partitionExecStats) {
+        this.partitionExecStats = partitionExecStats;
+    }
   public void setTotaldocs(Integer totaldocs) {
     this.totaldocs = totaldocs;
   }

@@ -13,7 +13,7 @@ import com.browseengine.bobo.api.BrowseHit.SerializableField;
 import com.browseengine.bobo.api.BrowseResult;
 import com.browseengine.bobo.api.FacetAccessible;
 
-public class SenseiResult extends BrowseResult implements AbstractSenseiResult {
+public class SenseiResult extends BrowseResult implements AbstractSenseiResult<SenseiRequestExecStats> {
 
   private static final long serialVersionUID = 1L;
 
@@ -22,7 +22,8 @@ public class SenseiResult extends BrowseResult implements AbstractSenseiResult {
   long numberOfHitsLong = 0;
   long numberOfGroupsLong = 0;
   private List<SenseiError> errors;
-
+  private Map<String, SenseiRequestExecStats> partitionExecStats;
+  
   public SenseiHit[] getSenseiHits() {
     BrowseHit[] hits = getHits();
     if (hits == null || hits.length == 0) {
@@ -37,6 +38,11 @@ public class SenseiResult extends BrowseResult implements AbstractSenseiResult {
 
   public String getParsedQuery() {
     return _parsedQuery;
+  }
+
+  @Override
+  public void setPartitionExecStats(Map<String, SenseiRequestExecStats> partitionExecStats) {
+    this.partitionExecStats = partitionExecStats;
   }
 
   @Override
@@ -179,10 +185,20 @@ public class SenseiResult extends BrowseResult implements AbstractSenseiResult {
   }
 
   @Override
+  public SenseiRequestExecStats getExecStats() {
+    return new SenseiRequestExecStats(getTime(), getNumHits());
+  }
+
+
+  @Override
   public void addError(SenseiError error) {
     if (errors == null) errors = new ArrayList<SenseiError>();
 
     errors.add(error);
   }
 
+  @Override
+  public Map<String, SenseiRequestExecStats> getPartitionExecStats() {
+    return partitionExecStats;
+  }
 }

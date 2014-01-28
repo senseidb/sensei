@@ -54,6 +54,7 @@ import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_HIT_UI
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_NUMHITS;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_PARSEDQUERY;
+import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_PARTITION_EXEC_STATS;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_SELECT_LIST;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_TID;
 import static com.senseidb.servlet.SenseiSearchServletParams.PARAM_RESULT_TIME;
@@ -417,6 +418,7 @@ public class DefaultSenseiJSONServlet extends AbstractSenseiRestServlet {
     jsonObj.put(PARAM_RESULT_NUMHITS, res.getNumHitsLong());
     jsonObj.put(PARAM_RESULT_NUMGROUPS, res.getNumGroupsLong());
     jsonObj.put(PARAM_RESULT_PARSEDQUERY, res.getParsedQuery());
+    jsonObj.put(PARAM_RESULT_PARTITION_EXEC_STATS, res.getPartitionExecStats());
     addErrors(jsonObj, res);
     SenseiHit[] hits = res.getSenseiHits();
     JSONArray hitArray = buildJSONHits(req, hits);

@@ -1,10 +1,17 @@
 package com.senseidb.test;
 
+
+import com.senseidb.search.req.SenseiRequestExecStats;
+import java.io.ByteArrayInputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -65,6 +72,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase {
     result.setParsedQuery("This is my parsed query value");
     result.setTime(Long.MAX_VALUE / 2);
     result.setNumHits(Integer.MAX_VALUE / 2);
+    result.setPartitionExecStats(Collections.singletonMap("node1", new SenseiRequestExecStats(1, 2)));
     result.setTid(1);
     result.setTotalDocs(512);
     result.setHits(createSenseiHits(10));
@@ -372,9 +380,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase {
       obj.put("key" + i, "val" + i);
     }
 
-    SenseiQuery query = new SenseiJSONQuery(obj);
-
-    return query;
+    return new SenseiJSONQuery(obj);
   }
 
   SortField[] createSortFields() {

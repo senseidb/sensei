@@ -150,6 +150,10 @@ public abstract class AbstractSenseiCoreService<Req extends AbstractSenseiReques
 
                 long end = System.currentTimeMillis();
                 res.setTime(end - start);
+
+                res.setPartitionExecStats(
+                  Collections.singletonMap(_core.getNodeId() + "-" + partition, res.getExecStats()));
+
                 return res;
               }
             });
@@ -175,6 +179,8 @@ public abstract class AbstractSenseiCoreService<Req extends AbstractSenseiReques
             }
             Res res = getEmptyResultInstance(e);
             res.setTime(-1);
+            res.setPartitionExecStats(
+              Collections.singletonMap(_core.getNodeId() + "-" + partitionArray[i], res.getExecStats()));
             resultList.add(res);
           }
         }

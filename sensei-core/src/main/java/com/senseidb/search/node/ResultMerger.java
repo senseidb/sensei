@@ -1,5 +1,6 @@
 package com.senseidb.search.node;
 
+import com.senseidb.search.req.SenseiRequestExecStats;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -565,10 +566,14 @@ public class ResultMerger {
     List<FacetAccessible>[] groupAccessibles = extractFacetAccessible(results);
 
     // Merge your facets
+    Map<String, SenseiRequestExecStats> mergedExecTimes = new HashMap<String, SenseiRequestExecStats>();
     for (SenseiResult res : results) {
       Map<String, FacetAccessible> facetMap = res.getFacetMap();
       if (facetMap != null) {
         facetList.add(facetMap);
+      }
+      if (res.getPartitionExecStats() != null) {
+        mergedExecTimes.putAll(res.getPartitionExecStats());
       }
     }
 
@@ -696,6 +701,7 @@ public class ResultMerger {
     }
 
     SenseiResult merged = new SenseiResult();
+    merged.setPartitionExecStats(mergedExecTimes);
     merged.setHits(hits);
     merged.setNumHitsLong(numHits);
     merged.setNumGroupsLong(numGroups);
