@@ -45,7 +45,7 @@ public class Examples {
             Operator.and))
         .addSelection(
           Selection.terms("color", Arrays.asList("red"), new ArrayList<String>(), Operator.or))
-        .paging(10, 0).fetchStored(true).addSort(Sort.desc("price")).build();
+        .paging(10, 0).fetchAllStoredFields(true).addSort(Sort.desc("price")).build();
     JSONObject serialized = (JSONObject) JsonSerializer.serialize(senseiRequest);
     System.out.println(serialized.toString(2));
     SenseiResult senseiResult = new SenseiServiceProxy("localhost", 8080)

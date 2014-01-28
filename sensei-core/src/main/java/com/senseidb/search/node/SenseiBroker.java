@@ -1,7 +1,10 @@
 package com.senseidb.search.node;
 
 import java.net.InetSocketAddress;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,6 +55,19 @@ public class SenseiBroker extends AbstractConsistentHashBroker<SenseiRequest, Se
           byte[] dataBytes = hit.getStoredValue();
           if (dataBytes == null || dataBytes.length == 0) {
             dataBytes = hit.getFieldBinaryValue(AbstractZoieIndexable.DOCUMENT_STORE_FIELD);
+            if (dataBytes != null) {
+              List<SerializableField> fields = new ArrayList<SerializableField>(hit.getStoredFields());
+              ListIterator<SerializableField> lIter = fields.listIterator();
+              while (lIter.hasNext()) {
+                SerializableField field = lIter.next();
+                if (AbstractZoieIndexable.DOCUMENT_STORE_FIELD.equals(field.name())) {
+                  lIter.remove();
+                }
+              }
+              hit.setStoredFields(fields);
+            }
+          } else {
+            hit.setStoredValue(null);
           }
 
           if (dataBytes != null && dataBytes.length > 0) {
@@ -83,9 +99,11 @@ public class SenseiBroker extends AbstractConsistentHashBroker<SenseiRequest, Se
   public SenseiResult mergeResults(SenseiRequest request, List<SenseiResult> resultList) {
     SenseiResult res = ResultMerger.merge(request, resultList, false);
 
-    if (request.isFetchStoredFields()) {
+    boolean fetchStoredFields = request.isFetchAllStoredFields() ||
+      request.getStoredFieldsToFetch() != null && !request.getStoredFieldsToFetch().isEmpty();
+    if (fetchStoredFields || request.isFetchStoredValue()) {
       long start = System.currentTimeMillis();
-      recoverSrcData(res, res.getSenseiHits(), request.isFetchStoredFields());
+      recoverSrcData(res, res.getSenseiHits(), fetchStoredFields);
       res.setTime(res.getTime() + (System.currentTimeMillis() - start));
     }
 

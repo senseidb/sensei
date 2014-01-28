@@ -1,9 +1,11 @@
 package com.senseidb.util;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 
+import java.util.Set;
 import org.apache.commons.configuration.BaseConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
@@ -15,6 +17,7 @@ import com.browseengine.bobo.api.BrowseSelection;
 import com.senseidb.search.node.SenseiQueryBuilder;
 import com.senseidb.search.node.SenseiQueryBuilderFactory;
 import com.senseidb.search.req.SenseiRequest;
+import proj.zoie.api.indexing.AbstractZoieIndexable;
 
 public class RequestConverter {
   private static Logger logger = Logger.getLogger(RequestConverter.class);
@@ -26,7 +29,20 @@ public class RequestConverter {
     breq.setOffset(req.getOffset());
     breq.setCount(req.getCount());
     breq.setSort(req.getSort());
-    breq.setFetchStoredFields(req.isFetchStoredFields());
+    if (!deferFetchFields(req)) {
+      breq.setFetchAllFields(req.isFetchAllStoredFields());
+
+      Set<String> fetchFields = req.getStoredFieldsToFetch();
+      // Rewrite fetchStoredFields for zoie store.
+      if (req.isFetchStoredValue()) {
+        if (fetchFields == null) {
+          fetchFields = new HashSet<String>();
+          req.setStoredFieldsToFetch(fetchFields);
+        }
+        fetchFields.add(AbstractZoieIndexable.DOCUMENT_STORE_FIELD);
+      }
+      breq.setFieldsToFetch(fetchFields);
+    }
     breq.setShowExplanation(req.isShowExplanation());
     breq.setTermVectorsToFetch(req.getTermVectorsToFetch());
     breq.setGroupBy(req.getGroupBy());
@@ -63,6 +79,11 @@ public class RequestConverter {
     // filter ids
     // TODO: needs to some how hook this up
     return breq;
+  }
+
+  public static boolean deferFetchFields(SenseiRequest req) {
+    // when group by is used, data is loaded after the fact
+    return req.getGroupBy() != null && req.getGroupBy().length > 0;
   }
 
   @SuppressWarnings("unchecked")

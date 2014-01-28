@@ -72,8 +72,14 @@ public class SenseiServiceProxy {
   }
 
   public Map<Long, JSONObject> sendGetRequest(long... uids) throws IOException, JSONException {
+    return sendGetRequest(true, true, uids);
+  }
+
+  public Map<Long, JSONObject> sendGetRequest(boolean includeValue, boolean includeFields,
+                                              long... uids) throws IOException, JSONException {
     Map<Long, JSONObject> ret = new LinkedHashMap<Long, JSONObject>(uids.length);
-    String response = sendPostRaw(getStoreGetUrl(), new JSONArray(uids).toString());
+    String response = sendPostRaw(getStoreGetUrl(includeValue, includeFields),
+      new JSONArray(uids).toString());
     if (response == null || response.length() == 0) {
       return ret;
     }
@@ -95,8 +101,25 @@ public class SenseiServiceProxy {
   }
 
   public String getStoreGetUrl() {
-    if (url != null) return url + "/get";
-    return "http://" + host + ":" + port + "/sensei/get";
+    return getStoreGetUrl(false, false);
+  }
+
+  public String getStoreGetUrl(boolean includeValue, boolean includeFields) {
+    String baseUrl;
+    if (url != null) {
+      baseUrl = url + "/get";
+    } else {
+      baseUrl = "http://" + host + ":" + port + "/sensei/get";
+    }
+    if (includeValue && includeFields) {
+      return baseUrl + "?value=true&fields=true";
+    } else if(includeValue) {
+      return baseUrl + "?value=true";
+    } else if (includeFields) {
+      return baseUrl + "?fields=true";
+    } else {
+      return baseUrl;
+    }
   }
 
   private JSONObject jsonResponse(String output) throws JSONException {

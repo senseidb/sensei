@@ -78,7 +78,7 @@ public class CoreSenseiServiceImpl extends AbstractSenseiCoreService<SenseiReque
     }
     // SortCollector collector =
     // browser.getSortCollector(req.getSort(),req.getQuery(), offset, count,
-    // req.isFetchStoredFields(),false);
+    // req.isFetchAllStoredFields(),false);
 
     // Map<String, FacetAccessible> facetCollectors = new HashMap<String,
     // FacetAccessible>();
