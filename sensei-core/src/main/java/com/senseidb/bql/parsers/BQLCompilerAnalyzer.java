@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -55,7 +54,7 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
   private Set<String> _usedFacets; // Facets used by relevance model
   private Set<String> _usedInternalVars; // Internal variables used by relevance model
 
-  private final Parser _parser;
+  private final BQLParser _parser;
   private final Map<String, String[]> _facetInfoMap;
 
   private final ParseTreeProperty<Object> jsonProperty = new ParseTreeProperty<Object>();
@@ -131,7 +130,7 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
       new HashSet<String>(Arrays.asList(new String[] { "simple", "multi" })));
   }
 
-  public BQLCompilerAnalyzer(Parser parser, Map<String, String[]> facetInfoMap) {
+  public BQLCompilerAnalyzer(BQLParser parser, Map<String, String[]> facetInfoMap) {
     _parser = parser;
     _facetInfoMap = facetInfoMap;
     _facetInfoMap.put("_uid", new String[] { "simple", "long" });
