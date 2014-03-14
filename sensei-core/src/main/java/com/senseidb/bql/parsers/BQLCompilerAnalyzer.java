@@ -12,8 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.Dependents;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RuleDependencies;
+import org.antlr.v4.runtime.RuleDependency;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -55,7 +57,7 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
   private Set<String> _usedFacets; // Facets used by relevance model
   private Set<String> _usedInternalVars; // Internal variables used by relevance model
 
-  private final Parser _parser;
+  private final BQLParser _parser;
   private final Map<String, String[]> _facetInfoMap;
 
   private final ParseTreeProperty<Object> jsonProperty = new ParseTreeProperty<Object>();
@@ -131,7 +133,7 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
       new HashSet<String>(Arrays.asList(new String[] { "simple", "multi" })));
   }
 
-  public BQLCompilerAnalyzer(Parser parser, Map<String, String[]> facetInfoMap) {
+  public BQLCompilerAnalyzer(BQLParser parser, Map<String, String[]> facetInfoMap) {
     _parser = parser;
     _facetInfoMap = facetInfoMap;
     _facetInfoMap.put("_uid", new String[] { "simple", "long" });
@@ -469,6 +471,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     return false;
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_statement, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_select_stmt, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitStatement(BQLParser.StatementContext ctx) {
     if (ctx.select_stmt() != null) {
@@ -476,12 +482,31 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    // changing an ancestor could result in a Select_stmtContext not being the entry point for this analysis.
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_select_stmt, version = 0, dependents = Dependents.ANCESTORS),
+  })
   @Override
   public void enterSelect_stmt(BQLParser.Select_stmtContext ctx) {
     _now = System.currentTimeMillis();
     _variables = new HashSet<String>();
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_select_stmt, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_order_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_limit_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_group_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_distinct_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_execute_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_browse_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_fetching_stored_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_route_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relevance_model_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_selection_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_where, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_given_clause, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitSelect_stmt(BQLParser.Select_stmtContext ctx) {
     if (ctx.order_by_clause().size() > 1) {
@@ -651,6 +676,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     jsonProperty.put(ctx, jsonObj);
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_selection_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_aggregation_function, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitSelection_list(BQLParser.Selection_listContext ctx) {
     JSONArray json = new FastJSONArray();
@@ -677,6 +707,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_aggregation_function, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_function_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitAggregation_function(BQLParser.Aggregation_functionContext ctx) {
     functionProperty.put(ctx, getTextProperty(ctx.id));
@@ -687,6 +722,9 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitColumn_name(BQLParser.Column_nameContext ctx) {
     StringBuilder builder = new StringBuilder();
@@ -706,6 +744,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     textProperty.put(ctx, builder.toString());
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_function_name, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitFunction_name(BQLParser.Function_nameContext ctx) {
     if (ctx.min != null) {
@@ -715,11 +757,19 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_where, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_search_expr, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitWhere(BQLParser.WhereContext ctx) {
     jsonProperty.put(ctx, jsonProperty.get(ctx.search_expr()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_order_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_sort_specs, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitOrder_by_clause(BQLParser.Order_by_clauseContext ctx) {
     if (ctx.RELEVANCE() != null) {
@@ -730,6 +780,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_sort_specs, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_sort_spec, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitSort_specs(BQLParser.Sort_specsContext ctx) {
     JSONArray sortArray = new FastJSONArray();
@@ -740,6 +794,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     jsonProperty.put(ctx, sortArray);
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_sort_spec, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitSort_spec(BQLParser.Sort_specContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -756,6 +814,9 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_limit_clause, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitLimit_clause(BQLParser.Limit_clauseContext ctx) {
     if (ctx.n1 != null) {
@@ -767,6 +828,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     countProperty.put(ctx, Integer.parseInt(ctx.n2.getText()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_comma_column_name_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitComma_column_name_list(BQLParser.Comma_column_name_listContext ctx) {
     JSONArray json = new FastJSONArray();
@@ -779,6 +844,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_or_column_name_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitOr_column_name_list(BQLParser.Or_column_name_listContext ctx) {
     JSONArray json = new FastJSONArray();
@@ -791,6 +860,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_group_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_comma_column_name_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitGroup_by_clause(BQLParser.Group_by_clauseContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -816,6 +889,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_distinct_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_or_column_name_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitDistinct_clause(BQLParser.Distinct_clauseContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -846,6 +923,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_browse_by_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_spec, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitBrowse_by_clause(BQLParser.Browse_by_clauseContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -860,6 +941,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_execute_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_function_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_dict, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_key_value_pair, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitExecute_clause(BQLParser.Execute_clauseContext ctx) {
     functionNameProperty.put(ctx, getTextProperty(ctx.funName));
@@ -879,6 +966,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_spec, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitFacet_spec(BQLParser.Facet_specContext ctx) {
     boolean expand = false;
@@ -913,16 +1004,26 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_fetching_stored_clause, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFetching_stored_clause(BQLParser.Fetching_stored_clauseContext ctx) {
     valProperty.put(ctx, ctx.FALSE().isEmpty());
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_route_by_clause, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitRoute_by_clause(BQLParser.Route_by_clauseContext ctx) {
     valProperty.put(ctx, unescapeStringLiteral(ctx.STRING_LITERAL()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_search_expr, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_term_expr, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitSearch_expr(BQLParser.Search_exprContext ctx) {
     JSONArray array = new FastJSONArray();
@@ -942,6 +1043,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_term_expr, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_factor_expr, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitTerm_expr(BQLParser.Term_exprContext ctx) {
     JSONArray array = new FastJSONArray();
@@ -977,6 +1082,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_factor_expr, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_search_expr, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFactor_expr(BQLParser.Factor_exprContext ctx) {
     if (ctx.predicate() != null) {
@@ -986,6 +1096,21 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_in_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_contains_all_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_equal_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_not_equal_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_query_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_between_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_range_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_match_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_like_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_null_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_empty_predicate, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitPredicate(BQLParser.PredicateContext ctx) {
     if (ctx.getChildCount() != 1) {
@@ -995,6 +1120,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     jsonProperty.put(ctx, jsonProperty.get(ctx.getChild(0)));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_in_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_except_clause, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitIn_predicate(BQLParser.In_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1046,6 +1177,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_empty_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitEmpty_predicate(BQLParser.Empty_predicateContext ctx) {
     try {
@@ -1077,6 +1212,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_contains_all_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_except_clause, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitContains_all_predicate(BQLParser.Contains_all_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1122,6 +1263,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_equal_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_predicate_props, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitEqual_predicate(BQLParser.Equal_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1185,6 +1332,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_not_equal_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitNot_equal_predicate(BQLParser.Not_equal_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1232,6 +1384,9 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_query_predicate, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitQuery_predicate(BQLParser.Query_predicateContext ctx) {
     try {
@@ -1246,6 +1401,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_between_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitBetween_predicate(BQLParser.Between_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1287,6 +1447,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_range_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitRange_predicate(BQLParser.Range_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1322,6 +1487,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_span, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_expr, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitTime_predicate(BQLParser.Time_predicateContext ctx) {
     if (ctx.LAST() != null) {
@@ -1389,6 +1560,15 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_span, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_week_part, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_day_part, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_hour_part, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_minute_part, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_second_part, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_millisecond_part, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitTime_span(BQLParser.Time_spanContext ctx) {
     long val = 0;
@@ -1419,42 +1599,53 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     valProperty.put(ctx, _now - val);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_week_part, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitTime_week_part(BQLParser.Time_week_partContext ctx) {
     long val = Integer.parseInt(ctx.INTEGER().getText()) * 7 * 24 * 60 * 60 * 1000L;
     valProperty.put(ctx, val);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_day_part, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitTime_day_part(BQLParser.Time_day_partContext ctx) {
     long val = Integer.parseInt(ctx.INTEGER().getText()) * 24 * 60 * 60 * 1000L;
     valProperty.put(ctx, val);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_hour_part, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitTime_hour_part(BQLParser.Time_hour_partContext ctx) {
     long val = Integer.parseInt(ctx.INTEGER().getText()) * 60 * 60 * 1000L;
     valProperty.put(ctx, val);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_minute_part, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitTime_minute_part(BQLParser.Time_minute_partContext ctx) {
     long val = Integer.parseInt(ctx.INTEGER().getText()) * 60 * 1000L;
     valProperty.put(ctx, val);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_second_part, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitTime_second_part(BQLParser.Time_second_partContext ctx) {
     long val = Integer.parseInt(ctx.INTEGER().getText()) * 1000L;
     valProperty.put(ctx, val);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_millisecond_part, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitTime_millisecond_part(BQLParser.Time_millisecond_partContext ctx) {
     long val = Integer.parseInt(ctx.INTEGER().getText());
     valProperty.put(ctx, val);
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_expr, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_span, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_date_time_string, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitTime_expr(BQLParser.Time_exprContext ctx) {
     if (ctx.time_span() != null) {
@@ -1468,6 +1659,9 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_date_time_string, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitDate_time_string(BQLParser.Date_time_stringContext ctx) {
     SimpleDateFormat format;
@@ -1507,6 +1701,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_match_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_selection_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitMatch_predicate(BQLParser.Match_predicateContext ctx) {
     try {
@@ -1540,6 +1738,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_like_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitLike_predicate(BQLParser.Like_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1568,6 +1770,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_null_predicate, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitNull_predicate(BQLParser.Null_predicateContext ctx) {
     String col = getTextProperty(ctx.column_name());
@@ -1585,6 +1791,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_non_variable_value_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitNon_variable_value_list(BQLParser.Non_variable_value_listContext ctx) {
     JSONArray json = new FastJSONArray();
@@ -1594,6 +1804,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_value, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitPython_style_list(BQLParser.Python_style_listContext ctx) {
     JSONArray json = new FastJSONArray();
@@ -1604,6 +1818,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_dict, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_key_value_pair, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitPython_style_dict(BQLParser.Python_style_dictContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -1618,6 +1836,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_value, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_dict, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitPython_style_value(BQLParser.Python_style_valueContext ctx) {
     if (ctx.value() != null) {
@@ -1631,6 +1855,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_non_variable_value_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitValue_list(BQLParser.Value_listContext ctx) {
     if (ctx.non_variable_value_list() != null) {
@@ -1643,6 +1871,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_numeric, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitValue(BQLParser.ValueContext ctx) {
     if (ctx.numeric() != null) {
@@ -1661,6 +1893,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_numeric, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_time_expr, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitNumeric(BQLParser.NumericContext ctx) {
     if (ctx.time_expr() != null) {
@@ -1684,16 +1920,28 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_except_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitExcept_clause(BQLParser.Except_clauseContext ctx) {
     jsonProperty.put(ctx, jsonProperty.get(ctx.value_list()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_predicate_props, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_prop_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitPredicate_props(BQLParser.Predicate_propsContext ctx) {
     jsonProperty.put(ctx, jsonProperty.get(ctx.prop_list()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_prop_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_key_value_pair, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitProp_list(BQLParser.Prop_listContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -1708,6 +1956,12 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_key_value_pair, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_python_style_dict, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitKey_value_pair(BQLParser.Key_value_pairContext ctx) {
     if (ctx.STRING_LITERAL() != null) {
@@ -1725,11 +1979,19 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_given_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_param_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitGiven_clause(BQLParser.Given_clauseContext ctx) {
     jsonProperty.put(ctx, jsonProperty.get(ctx.facet_param_list()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarators, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarator, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitVariable_declarators(BQLParser.Variable_declaratorsContext ctx) {
     JSONArray json = new FastJSONArray();
@@ -1739,16 +2001,30 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarator, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarator_id, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitVariable_declarator(BQLParser.Variable_declaratorContext ctx) {
     varNameProperty.put(ctx, varNameProperty.get(ctx.variable_declarator_id()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarator_id, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitVariable_declarator_id(BQLParser.Variable_declarator_idContext ctx) {
     varNameProperty.put(ctx, ctx.IDENT().getText());
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_type, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_class_or_interface_type, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_primitive_type, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_boxed_type, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_limited_type, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitType(BQLParser.TypeContext ctx) {
     if (ctx.class_or_interface_type() != null) {
@@ -1764,11 +2040,18 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_class_or_interface_type, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitClass_or_interface_type(BQLParser.Class_or_interface_typeContext ctx) {
     typeNameProperty.put(ctx, _fastutilTypeMap.get(ctx.FAST_UTIL_DATA_TYPE().getText()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_type_arguments, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_type_argument, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitType_arguments(BQLParser.Type_argumentsContext ctx) {
     StringBuilder builder = new StringBuilder();
@@ -1783,11 +2066,20 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     typeArgsProperty.put(ctx, builder.toString());
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameters, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameter_decls, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFormal_parameters(BQLParser.Formal_parametersContext ctx) {
     jsonProperty.put(ctx, jsonProperty.get(ctx.formal_parameter_decls()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameter_decls, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameter_decl, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarator_id, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFormal_parameter_decls(BQLParser.Formal_parameter_declsContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -1804,12 +2096,20 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameter_decl, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_type, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarator_id, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFormal_parameter_decl(BQLParser.Formal_parameter_declContext ctx) {
     typeNameProperty.put(ctx, typeNameProperty.get(ctx.type()));
     varNameProperty.put(ctx, varNameProperty.get(ctx.variable_declarator_id()));
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relevance_model, version = 0, dependents = Dependents.ANCESTORS),
+  })
   @Override
   public void enterRelevance_model(BQLParser.Relevance_modelContext ctx) {
     _usedFacets = new HashSet<String>();
@@ -1819,6 +2119,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     _symbolTable.offerLast(_currentScope);
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relevance_model, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_model_block, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameters, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitRelevance_model(BQLParser.Relevance_modelContext ctx) {
     functionBodyProperty.put(ctx, getTextProperty(ctx.model_block()));
@@ -1858,6 +2163,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_model_block, version = 0, dependents = {Dependents.SELF, Dependents.PARENTS}),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relevance_model, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_formal_parameters, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void enterModel_block(BQLParser.Model_blockContext ctx) {
     if (!(ctx.getParent() instanceof BQLParser.Relevance_modelContext)) {
@@ -1884,18 +2194,29 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_block, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void enterBlock(BQLParser.BlockContext ctx) {
     _currentScope = new HashMap<String, String>();
     _symbolTable.offerLast(_currentScope);
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_block, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitBlock(BQLParser.BlockContext ctx) {
     _symbolTable.pollLast();
     _currentScope = _symbolTable.peekLast();
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_local_variable_declaration, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_variable_declarators, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_type, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitLocal_variable_declaration(BQLParser.Local_variable_declarationContext ctx) {
     try {
@@ -1923,6 +2244,9 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_java_statement, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void enterJava_statement(BQLParser.Java_statementContext ctx) {
     if (ctx.FOR() != null) {
@@ -1931,6 +2255,9 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_java_statement, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitJava_statement(BQLParser.Java_statementContext ctx) {
     if (ctx.FOR() != null) {
@@ -1939,16 +2266,19 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_assignment_operator, version = 0, dependents = Dependents.DESCENDANTS)
   @Override
   public void enterAssignment_operator(BQLParser.Assignment_operatorContext ctx) {
     checkOperatorSpacing(ctx);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relational_op, version = 0, dependents = Dependents.DESCENDANTS)
   @Override
   public void enterRelational_op(BQLParser.Relational_opContext ctx) {
     checkOperatorSpacing(ctx);
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_shift_op, version = 0, dependents = Dependents.DESCENDANTS)
   @Override
   public void enterShift_op(BQLParser.Shift_opContext ctx) {
     checkOperatorSpacing(ctx);
@@ -1977,6 +2307,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_primary, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_java_ident, version = 0, dependents = Dependents.DESCENDANTS),
+  })
   @Override
   public void exitPrimary(BQLParser.PrimaryContext ctx) {
     if (ctx.java_ident() != null) {
@@ -1992,6 +2326,11 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relevance_model_clause, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_relevance_model, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_prop_list, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitRelevance_model_clause(BQLParser.Relevance_model_clauseContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -2029,6 +2368,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_param_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_param, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFacet_param_list(BQLParser.Facet_param_listContext ctx) {
     JSONObject json = new FastJSONObject();
@@ -2049,6 +2392,13 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_param, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.DESCENDANTS),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_param_type, version = 0, dependents = Dependents.SELF),
+  })
   @Override
   public void exitFacet_param(BQLParser.Facet_paramContext ctx) {
     facetProperty.put(ctx, getTextProperty(ctx.column_name())); // XXX Check error here?
@@ -2081,11 +2431,20 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
     }
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_facet_param_type, version = 0, dependents = Dependents.SELF)
   @Override
   public void exitFacet_param_type(BQLParser.Facet_param_typeContext ctx) {
     paramTypeProperty.put(ctx, ctx.t.getText());
   }
 
+  /**
+   * Note to callers: make sure to include a {@link Dependents#DESCENDANTS}
+   * dependency on the context type passed as an argument to this method.
+   */
+  @RuleDependencies({
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_column_name, version = 0, dependents = Dependents.SELF),
+    @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_function_name, version = 0, dependents = Dependents.SELF)
+  })
   private String getTextProperty(ParserRuleContext ctx) {
     switch (ctx.getRuleIndex()) {
     case BQLParser.RULE_column_name:
@@ -2156,6 +2515,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
       this.invalidDataIndex = invalidDataIndex;
     }
 
+    @RuleDependencies({
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF),
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_non_variable_value_list, version = 0, dependents = Dependents.SELF)
+    })
     @Override
     public ParseTree visitValue_list(BQLParser.Value_listContext ctx) {
       if (ctx.non_variable_value_list() != null) {
@@ -2167,6 +2530,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
       }
     }
 
+    @RuleDependencies({
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_non_variable_value_list, version = 0, dependents = Dependents.SELF),
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF)
+    })
     @Override
     public ParseTree visitNon_variable_value_list(BQLParser.Non_variable_value_listContext ctx) {
       List<BQLParser.ValueContext> values = ctx.value();
@@ -2177,6 +2544,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
       return ctx;
     }
 
+    @RuleDependencies({
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_between_predicate, version = 0, dependents = Dependents.SELF),
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value, version = 0, dependents = Dependents.SELF)
+    })
     @Override
     public ParseTree visitBetween_predicate(BQLParser.Between_predicateContext ctx) {
       switch (invalidDataIndex) {
@@ -2191,6 +2562,10 @@ public class BQLCompilerAnalyzer extends BQLBaseListener {
       }
     }
 
+    @RuleDependencies({
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_except_clause, version = 0, dependents = Dependents.SELF),
+      @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_value_list, version = 0, dependents = Dependents.SELF)
+    })
     @Override
     public ParseTree visitExcept_clause(BQLParser.Except_clauseContext ctx) {
       return visit(ctx.value_list());
