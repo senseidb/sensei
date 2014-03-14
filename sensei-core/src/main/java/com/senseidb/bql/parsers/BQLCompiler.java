@@ -8,10 +8,12 @@ import java.util.Map;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.Dependents;
 import org.antlr.v4.runtime.FailedPredicateException;
 import org.antlr.v4.runtime.InputMismatchException;
 import org.antlr.v4.runtime.NoViableAltException;
 import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.RuleDependency;
 import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.misc.IntegerStack;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -29,6 +31,7 @@ public class BQLCompiler extends AbstractCompiler {
     _facetInfoMap = facetInfoMap;
   }
 
+  @RuleDependency(recognizer = BQLParser.class, rule = BQLParser.RULE_statement, version = 0, dependents = Dependents.SELF)
   @Override
   public JSONObject compile(String bqlStmt) throws RecognitionException, ParseCancellationException {
     // Lexer splits input into tokens
@@ -122,6 +125,10 @@ public class BQLCompiler extends AbstractCompiler {
     _facetInfoMap = facetInfoMap;
   }
 
+  /**
+   * Note to callers: make sure to include a {@link Dependents#DESCENDANTS}
+   * dependency on the context type passed as an argument to this method.
+   */
     private static TerminalNode getStartNode(ParseTree tree) {
         if (tree instanceof TerminalNode) {
             return (TerminalNode)tree;
