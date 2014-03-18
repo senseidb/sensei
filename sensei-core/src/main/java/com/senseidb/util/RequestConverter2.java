@@ -357,6 +357,10 @@ public class RequestConverter2 {
           if (field == null || field.length() == 0) {
             continue;
           }
+          if (SORT_SCORE.equals(field) || SORT_RELEVANCE.equalsIgnoreCase(field)) {
+            sortFieldList.add(SortField.FIELD_SCORE);
+            continue;
+          }
           String order = ((JSONObject) obj).optString(field);
           boolean rev = false;
           if (RequestConverter2.SORT_DESC.equals(order)) {
