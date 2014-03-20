@@ -19,12 +19,13 @@ import com.senseidb.search.client.req.filter.FilterJsonHandler;
  *
  *
  */
+@SuppressWarnings("unused")
 @CustomJsonHandler(value = QueryJsonHandler.class)
 public class FilteredQuery extends Query {
 
-  private Query query;
+  private final Query query;
   @CustomJsonHandler(value = FilterJsonHandler.class, flatten = false)
-  private Filter filter;
+  private final Filter filter;
   private double boost;
 
   public FilteredQuery(Query query, Filter filter, double boost) {

@@ -1,7 +1,6 @@
 package com.senseidb.cluster.routing;
 
-public interface HashProvider
-{
+public interface HashProvider {
   /**
    * Hash the key into a long.
    * 

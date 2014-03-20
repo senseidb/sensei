@@ -10,26 +10,35 @@ import org.apache.lucene.search.DocIdSetIterator;
  */
 public class SynchronizedIterator extends DocIdSetIterator {
 
-
   private final DocIdSetIterator inner;
+
   public SynchronizedIterator(DocIdSetIterator inner) {
     this.inner = inner;
   }
+
   @Override
   public int nextDoc() throws IOException {
-   synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
-     return inner.nextDoc();
-   }
+    synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
+      return inner.nextDoc();
+    }
   }
-@Override
-public int advance(int id) throws IOException {
-  synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
-    return inner.advance(id);
+
+  @Override
+  public int advance(int id) throws IOException {
+    synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
+      return inner.advance(id);
+    }
   }
-}
-@Override
-public int docID() {
-  // TODO Auto-generated method stub
-  return inner.docID();
-}
+
+  @Override
+  public int docID() {
+    // TODO Auto-generated method stub
+    return inner.docID();
+  }
+
+  @Override
+  public long cost() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
 }

@@ -7,7 +7,6 @@ import java.net.URISyntaxException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.mortbay.jetty.Server;
 
-import com.senseidb.conf.SenseiConfParams;
 import com.senseidb.conf.SenseiServerBuilder;
 import com.senseidb.search.node.SenseiBroker;
 import com.senseidb.search.node.SenseiServer;
@@ -21,7 +20,7 @@ public class SingleNodeStarter {
   private static Server jettyServer;
   private static SenseiServer server;
   private static SenseiBroker senseiBroker;
-	private static BrokerConfig brokerConfig;
+  private static BrokerConfig brokerConfig;
 
   public static void start(String localPath, int expectedDocs) {
     start(new File(getUri(localPath)), expectedDocs);
@@ -30,9 +29,9 @@ public class SingleNodeStarter {
   public static void start(File confDir, int expectedDocs) {
     if (!serverStarted) {
       try {
-        PropertiesConfiguration senseiConfiguration = new PropertiesConfiguration(new File(confDir, "sensei.properties"));
-        final String indexDir = senseiConfiguration.getString(SenseiConfParams.SENSEI_INDEX_DIR);
-       // rmrf(new File(indexDir));
+        PropertiesConfiguration senseiConfiguration = new PropertiesConfiguration(new File(confDir,
+            "sensei.properties"));
+        // rmrf(new File(indexDir));
         SenseiServerBuilder senseiServerBuilder = new SenseiServerBuilder(confDir, null);
         server = senseiServerBuilder.buildServer();
         jettyServer = senseiServerBuilder.buildHttpRestServer();
@@ -46,7 +45,7 @@ public class SingleNodeStarter {
         });
         brokerConfig = new BrokerConfig(senseiConfiguration);
         brokerConfig.init(null);
-         senseiBroker = brokerConfig.buildSenseiBroker();
+        senseiBroker = brokerConfig.buildSenseiBroker();
         waitTillServerStarts(expectedDocs);
       } catch (Exception ex) {
         throw new RuntimeException(ex);
@@ -54,7 +53,8 @@ public class SingleNodeStarter {
     }
   }
 
-  public static void waitTillServerStarts(int expectedDocs) throws SenseiException, InterruptedException {
+  public static void waitTillServerStarts(int expectedDocs) throws SenseiException,
+      InterruptedException {
     int counter = 0;
     while (true) {
       SenseiResult senseiResult = senseiBroker.browse(new SenseiRequest());
@@ -84,13 +84,12 @@ public class SingleNodeStarter {
     }
     if (f.isDirectory()) {
       for (File sub : f.listFiles()) {
-        if (!rmrf(sub))
-          return false;
+        if (!rmrf(sub)) return false;
       }
     }
     return f.delete();
   }
- 
+
   public static boolean isServerStarted() {
     return serverStarted;
   }
@@ -102,25 +101,25 @@ public class SingleNodeStarter {
       throw new RuntimeException(ex);
     }
   }
-  
-	public static void shutdown() {
-		try {
-			jettyServer.stop();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			server.shutdown();
-			serverStarted = false;
-			try {
-				senseiBroker.shutdown();
-			} finally {
-				senseiBroker = null;
-				try {
-					brokerConfig.shutdown();
-				} finally {
-					brokerConfig = null;
-				}
-			}
-		}
-	}
+
+  public static void shutdown() {
+    try {
+      jettyServer.stop();
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      server.shutdown();
+      serverStarted = false;
+      try {
+        senseiBroker.shutdown();
+      } finally {
+        senseiBroker = null;
+        try {
+          brokerConfig.shutdown();
+        } finally {
+          brokerConfig = null;
+        }
+      }
+    }
+  }
 }

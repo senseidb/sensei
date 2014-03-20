@@ -1,6 +1,5 @@
 package com.senseidb.svc.impl;
 
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -83,12 +82,9 @@ import com.senseidb.search.req.SenseiSystemInfo;
 import com.senseidb.servlet.SenseiSearchServletParams;
 import com.senseidb.svc.api.SenseiException;
 import com.senseidb.svc.api.SenseiService;
-import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
-
-public class HttpRestSenseiServiceImpl implements SenseiService
-{
+public class HttpRestSenseiServiceImpl implements SenseiService {
   private static final Logger log = Logger.getLogger(HttpRestSenseiServiceImpl.class);
   String _scheme;
   String _host;
@@ -98,46 +94,17 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   int _maxRetries;
   DefaultHttpClient _httpclient;
 
-  public HttpRestSenseiServiceImpl(
-      String scheme,
-      String host,
-      int port,
-      String path)
-  {
-    this(
-      scheme,
-      host,
-      port,
-      path,
-      5000,
-      5);
+  public HttpRestSenseiServiceImpl(String scheme, String host, int port, String path) {
+    this(scheme, host, port, path, 5000, 5);
   }
 
-  public HttpRestSenseiServiceImpl(
-      String scheme,
-      String host,
-      int port,
-      String path,
-      int defaultKeepAliveDurationMS,
-      final int maxRetries)
-  {
-    this(scheme,
-         host,
-         port,
-         path,
-         defaultKeepAliveDurationMS,
-         maxRetries,
-         null);
+  public HttpRestSenseiServiceImpl(String scheme, String host, int port, String path,
+      int defaultKeepAliveDurationMS, final int maxRetries) {
+    this(scheme, host, port, path, defaultKeepAliveDurationMS, maxRetries, null);
   }
 
-  public HttpRestSenseiServiceImpl(String scheme,
-                                   String host,
-                                   int port,
-                                   String path,
-                                   int defaultKeepAliveDurationMS,
-                                   final int maxRetries,
-                                   HttpRequestRetryHandler retryHandler)
-  {
+  public HttpRestSenseiServiceImpl(String scheme, String host, int port, String path,
+      int defaultKeepAliveDurationMS, final int maxRetries, HttpRequestRetryHandler retryHandler) {
     _scheme = scheme;
     _host = host;
     _port = port;
@@ -146,50 +113,43 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     _maxRetries = maxRetries;
     _httpclient = createHttpClient(retryHandler);
   }
-  
-  public HttpRestSenseiServiceImpl(String urlString) throws MalformedURLException{
-	URL url = new URL(urlString);
-	_scheme = url.getProtocol();
-	_host = url.getHost();
-	_port = url.getPort();
-	_path = url.getPath();
-	_defaultKeepAliveDurationMS = 5000;
-	_maxRetries = 5;
-	_httpclient = createHttpClient(null);
+
+  public HttpRestSenseiServiceImpl(String urlString) throws MalformedURLException {
+    URL url = new URL(urlString);
+    _scheme = url.getProtocol();
+    _host = url.getHost();
+    _port = url.getPort();
+    _path = url.getPath();
+    _defaultKeepAliveDurationMS = 5000;
+    _maxRetries = 5;
+    _httpclient = createHttpClient(null);
   }
 
-  private DefaultHttpClient createHttpClient(HttpRequestRetryHandler retryHandler)
-  {
+  private DefaultHttpClient createHttpClient(HttpRequestRetryHandler retryHandler) {
     HttpParams params = new BasicHttpParams();
     SchemeRegistry registry = new SchemeRegistry();
     registry.register(new Scheme(_scheme, _port, PlainSocketFactory.getSocketFactory()));
     ClientConnectionManager cm = new ThreadSafeClientConnManager(registry);
     DefaultHttpClient client = new DefaultHttpClient(cm, params);
-    if (retryHandler == null)
-    {
-      retryHandler = new HttpRequestRetryHandler()
-      {
-        public boolean retryRequest(IOException exception, int executionCount, HttpContext context)
-        {
-          if (executionCount >= _maxRetries)
-          {
+    if (retryHandler == null) {
+      retryHandler = new HttpRequestRetryHandler() {
+        @Override
+        public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+          if (executionCount >= _maxRetries) {
             // Do not retry if over max retry count
             return false;
           }
-          if (exception instanceof NoHttpResponseException)
-          {
+          if (exception instanceof NoHttpResponseException) {
             // Retry if the server dropped connection on us
             return true;
           }
-          if (exception instanceof SSLHandshakeException)
-          {
+          if (exception instanceof SSLHandshakeException) {
             // Do not retry on SSL handshake exception
             return false;
           }
           HttpRequest request = (HttpRequest) context.getAttribute(ExecutionContext.HTTP_REQUEST);
           boolean idempotent = !(request instanceof HttpEntityEnclosingRequest);
-          if (idempotent)
-          {
+          if (idempotent) {
             // Retry if the request is considered idempotent
             return true;
           }
@@ -199,32 +159,26 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     }
     client.setHttpRequestRetryHandler(retryHandler);
 
-    client.addRequestInterceptor(new HttpRequestInterceptor()
-    {
+    client.addRequestInterceptor(new HttpRequestInterceptor() {
+      @Override
       public void process(final HttpRequest request, final HttpContext context)
-        throws HttpException, IOException
-      {
-        if (!request.containsHeader("Accept-Encoding"))
-        {
+          throws HttpException, IOException {
+        if (!request.containsHeader("Accept-Encoding")) {
           request.addHeader("Accept-Encoding", "gzip");
         }
       }
     });
 
-    client.addResponseInterceptor(new HttpResponseInterceptor()
-    {
+    client.addResponseInterceptor(new HttpResponseInterceptor() {
+      @Override
       public void process(final HttpResponse response, final HttpContext context)
-        throws HttpException, IOException
-      {
+          throws HttpException, IOException {
         HttpEntity entity = response.getEntity();
         Header ceheader = entity.getContentEncoding();
-        if (ceheader != null)
-        {
+        if (ceheader != null) {
           HeaderElement[] codecs = ceheader.getElements();
-          for (int i = 0; i < codecs.length; i++)
-          {
-            if (codecs[i].getName().equalsIgnoreCase("gzip"))
-            {
+          for (int i = 0; i < codecs.length; i++) {
+            if (codecs[i].getName().equalsIgnoreCase("gzip")) {
               response.setEntity(new GzipDecompressingEntity(response.getEntity()));
               return;
             }
@@ -233,33 +187,26 @@ public class HttpRestSenseiServiceImpl implements SenseiService
       }
     });
 
-    client.setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy()
-    {
+    client.setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy() {
       @Override
-      public long getKeepAliveDuration(HttpResponse response, HttpContext context)
-      {
+      public long getKeepAliveDuration(HttpResponse response, HttpContext context) {
         // Honor 'keep-alive' header
-        HeaderElementIterator it = new BasicHeaderElementIterator(response.headerIterator(HTTP.CONN_KEEP_ALIVE));
-        while (it.hasNext())
-        {
+        HeaderElementIterator it = new BasicHeaderElementIterator(response
+            .headerIterator(HTTP.CONN_KEEP_ALIVE));
+        while (it.hasNext()) {
           HeaderElement he = it.nextElement();
           String param = he.getName();
           String value = he.getValue();
-          if ((value != null) && param.equalsIgnoreCase("timeout"))
-          {
-            try
-            {
+          if ((value != null) && param.equalsIgnoreCase("timeout")) {
+            try {
               return Long.parseLong(value) * 1000;
-            }
-            catch (NumberFormatException ignore)
-            {
+            } catch (NumberFormatException ignore) {
             }
           }
         }
 
         long keepAlive = super.getKeepAliveDuration(response, context);
-        if (keepAlive == -1)
-        {
+        if (keepAlive == -1) {
           keepAlive = _defaultKeepAliveDurationMS;
         }
         return keepAlive;
@@ -269,25 +216,20 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     return client;
   }
 
-  private static class GzipDecompressingEntity extends HttpEntityWrapper
-  {
-    public GzipDecompressingEntity(final HttpEntity entity)
-    {
+  private static class GzipDecompressingEntity extends HttpEntityWrapper {
+    public GzipDecompressingEntity(final HttpEntity entity) {
       super(entity);
     }
 
     @Override
-    public InputStream getContent()
-      throws IOException, IllegalStateException
-    {
+    public InputStream getContent() throws IOException, IllegalStateException {
       // the wrapped entity's getContent() decides about repeatability
       InputStream wrappedin = wrappedEntity.getContent();
       return new GZIPInputStream(wrappedin);
     }
 
     @Override
-    public long getContentLength()
-    {
+    public long getContentLength() {
       // length of ungzipped content is not known
       return -1;
     }
@@ -295,37 +237,25 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   }
 
   @Override
-  public SenseiResult doQuery(SenseiRequest req)
-      throws SenseiException
-  {
+  public SenseiResult doQuery(SenseiRequest req) throws SenseiException {
     SenseiResult result;
     InputStream is = null;
 
-    try
-    {
+    try {
       List<NameValuePair> queryParams = convertRequestToQueryParams(req);
       URI requestURI = buildRequestURI(queryParams);
       is = makeRequest(requestURI);
       JSONObject jsonObj = convertStreamToJSONObject(is);
       result = buildSenseiResult(jsonObj);
-    }
-    catch (URISyntaxException e)
-    {
+    } catch (URISyntaxException e) {
       throw new SenseiException(e);
-    }
-    catch (IOException e)
-    {
+    } catch (IOException e) {
       throw new SenseiException(e);
-    }
-    catch (JSONException e)
-    {
+    } catch (JSONException e) {
       throw new SenseiException(e);
-    }
-    finally
-    {
-      if (is != null)
-      {
-    	  IOUtils.closeQuietly(is);
+    } finally {
+      if (is != null) {
+        IOUtils.closeQuietly(is);
       }
     }
 
@@ -333,36 +263,24 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   }
 
   @Override
-  public SenseiSystemInfo getSystemInfo()
-      throws SenseiException
-  {
+  public SenseiSystemInfo getSystemInfo() throws SenseiException {
     SenseiSystemInfo result;
     InputStream is = null;
 
-    try
-    {
+    try {
       URI requestURI = buildSysInfoRequestURI();
       is = makeRequest(requestURI);
       JSONObject jsonObj = convertStreamToJSONObject(is);
       result = buildSysInfo(jsonObj);
-    }
-    catch (URISyntaxException e)
-    {
+    } catch (URISyntaxException e) {
       throw new SenseiException(e);
-    }
-    catch (IOException e)
-    {
+    } catch (IOException e) {
       throw new SenseiException(e);
-    }
-    catch (JSONException e)
-    {
+    } catch (JSONException e) {
       throw new SenseiException(e);
-    }
-    finally
-    {
-      if (is != null)
-      {
-    	  IOUtils.closeQuietly(is);
+    } finally {
+      if (is != null) {
+        IOUtils.closeQuietly(is);
       }
     }
 
@@ -370,8 +288,7 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   }
 
   public static List<NameValuePair> convertRequestToQueryParams(SenseiRequest req)
-      throws SenseiException, UnsupportedEncodingException
-  {
+      throws SenseiException, UnsupportedEncodingException {
     List<NameValuePair> qparams = new ArrayList<NameValuePair>();
 
     convertScalarParams(qparams, req);
@@ -400,144 +317,160 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   public static void convertPartitionParams(List<NameValuePair> qparams, Set<Integer> partitions) {
     if (partitions == null || partitions.size() == 0) return;
 
-    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_PARTITIONS, join(partitions, ",")));
+    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_PARTITIONS, join(partitions,
+      ",")));
   }
 
   public static void convertScalarParams(List<NameValuePair> qparams, SenseiRequest req) {
-    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FETCH_STORED, Boolean.toString(req.isFetchStoredFields())));
-    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FETCH_STORED_VALUE, Boolean.toString(req.isFetchStoredValue())));
-    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_SHOW_EXPLAIN, Boolean.toString(req.isShowExplanation())));
-    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_OFFSET, Integer.toString(req.getOffset())));
-    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_COUNT, Integer.toString(req.getCount())));
+    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FETCH_STORED, Boolean
+        .toString(req.isFetchStoredFields())));
+    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_SHOW_EXPLAIN, Boolean
+        .toString(req.isShowExplanation())));
+    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_OFFSET, Integer.toString(req
+        .getOffset())));
+    qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_COUNT, Integer.toString(req
+        .getCount())));
     Set<String> tvFetch = req.getTermVectorsToFetch();
-    if (tvFetch!=null && tvFetch.size()>0){
-      String fetchString = join(tvFetch,",");
-      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FETCH_TERMVECTOR, fetchString));
+    if (tvFetch != null && tvFetch.size() > 0) {
+      String fetchString = join(tvFetch, ",");
+      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FETCH_TERMVECTOR,
+          fetchString));
     }
     Set<String> sfFetch = req.getStoredFieldsToFetch();
-    if (sfFetch !=null && sfFetch.size()>0){
-      String fetchFieldsString = join(sfFetch,",");
-      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FIELDS_TO_FETCH, fetchFieldsString));
+    if (sfFetch != null && sfFetch.size() > 0) {
+      String fetchFieldsString = join(sfFetch, ",");
+      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_FIELDS_TO_FETCH,
+          fetchFieldsString));
     }
 
-    if (req.getRouteParam() != null)
-    {
-      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_ROUTE_PARAM, req.getRouteParam()));
+    if (req.getRouteParam() != null) {
+      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_ROUTE_PARAM, req
+          .getRouteParam()));
     }
 
-    if (req.getGroupBy() != null)
-    {
-      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_GROUP_BY, StringUtils.join(req.getGroupBy(), ',')));
+    if (req.getGroupBy() != null) {
+      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_GROUP_BY, StringUtils
+          .join(req.getGroupBy(), ',')));
     }
 
-    if (req.getMaxPerGroup() > 0)
-    {
-      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_MAX_PER_GROUP, Integer.toString(req.getMaxPerGroup())));
+    if (req.getMaxPerGroup() > 0) {
+      qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_MAX_PER_GROUP, Integer
+          .toString(req.getMaxPerGroup())));
     }
 
   }
 
-  public static void convertFacetInitParams(List<NameValuePair> qparams, Map<String,FacetHandlerInitializerParam> initParams)
-      throws UnsupportedEncodingException
-  {
+  public static void convertFacetInitParams(List<NameValuePair> qparams,
+      Map<String, FacetHandlerInitializerParam> initParams) throws UnsupportedEncodingException {
     final String format = "%s.%s.%s.%s";
 
-    for (Entry<String,FacetHandlerInitializerParam> entry : initParams.entrySet()) {
+    for (Entry<String, FacetHandlerInitializerParam> entry : initParams.entrySet()) {
       String facetName = entry.getKey();
       FacetHandlerInitializerParam param = entry.getValue();
 
       for (String paramName : param.getBooleanParamNames()) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_TYPE ),
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
             SenseiSearchServletParams.PARAM_DYNAMIC_TYPE_BOOL));
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_VAL),
-            join(param.getBooleanParam(paramName), ",")));
+        qparams
+            .add(new BasicNameValuePair(String.format(format,
+              SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+              SenseiSearchServletParams.PARAM_DYNAMIC_VAL), join(param.getBooleanParam(paramName),
+              ",")));
       }
 
       for (String paramName : param.getByteArrayParamNames()) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
             SenseiSearchServletParams.PARAM_DYNAMIC_TYPE_BYTEARRAY));
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_VAL),
-            new String(param.getByteArrayParam(paramName), "UTF-8")));
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_VAL), new String(param
+            .getByteArrayParam(paramName), "UTF-8")));
       }
 
       for (String paramName : param.getDoubleParamNames()) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
             SenseiSearchServletParams.PARAM_DYNAMIC_TYPE_DOUBLE));
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_VAL),
-            join(param.getDoubleParam(paramName), ",")));
+        qparams
+            .add(new BasicNameValuePair(String.format(format,
+              SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+              SenseiSearchServletParams.PARAM_DYNAMIC_VAL), join(param.getDoubleParam(paramName),
+              ",")));
       }
 
       for (String paramName : param.getIntParamNames()) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
             SenseiSearchServletParams.PARAM_DYNAMIC_TYPE_INT));
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_VAL),
-            join(param.getIntParam(paramName), ",")));
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_VAL), join(param.getIntParam(paramName), ",")));
       }
 
       for (String paramName : param.getLongParamNames()) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
             SenseiSearchServletParams.PARAM_DYNAMIC_TYPE_LONG));
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_VAL),
-            join(param.getLongParam(paramName), ",")));
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_VAL), join(param.getLongParam(paramName), ",")));
       }
 
       for (String paramName : param.getStringParamNames()) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+          SenseiSearchServletParams.PARAM_DYNAMIC_TYPE),
             SenseiSearchServletParams.PARAM_DYNAMIC_TYPE_STRING));
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName, SenseiSearchServletParams.PARAM_DYNAMIC_VAL),
-            join(param.getStringParam(paramName), ",")));
+        qparams
+            .add(new BasicNameValuePair(String.format(format,
+              SenseiSearchServletParams.PARAM_DYNAMIC_INIT, facetName, paramName,
+              SenseiSearchServletParams.PARAM_DYNAMIC_VAL), join(param.getStringParam(paramName),
+              ",")));
       }
     }
   }
 
-  public static void convertFacetSpecs(List<NameValuePair> qparams, Map<String,FacetSpec> facetSpecs) {
+  public static void convertFacetSpecs(List<NameValuePair> qparams,
+      Map<String, FacetSpec> facetSpecs) {
     final String format = "%s.%s.%s";
 
-    for (Entry<String,FacetSpec> entry : facetSpecs.entrySet()) {
+    for (Entry<String, FacetSpec> entry : facetSpecs.entrySet()) {
       String facetName = entry.getKey();
       FacetSpec spec = entry.getValue();
 
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_FACET, facetName, SenseiSearchServletParams.PARAM_FACET_MAX),
-          Integer.toString(spec.getMaxCount())));
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_FACET, facetName, SenseiSearchServletParams.PARAM_FACET_ORDER),
-          convertFacetSortSpec(spec.getOrderBy())));
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_FACET, facetName, SenseiSearchServletParams.PARAM_FACET_EXPAND),
-          Boolean.toString(spec.isExpandSelection())));
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_FACET, facetName, SenseiSearchServletParams.PARAM_FACET_MINHIT),
-          Integer.toString(spec.getMinHitCount())));
+      qparams.add(new BasicNameValuePair(String
+          .format(format, SenseiSearchServletParams.PARAM_FACET, facetName,
+            SenseiSearchServletParams.PARAM_FACET_MAX), Integer.toString(spec.getMaxCount())));
+      qparams.add(new BasicNameValuePair(String.format(format,
+        SenseiSearchServletParams.PARAM_FACET, facetName,
+        SenseiSearchServletParams.PARAM_FACET_ORDER), convertFacetSortSpec(spec.getOrderBy())));
+      qparams.add(new BasicNameValuePair(String.format(format,
+        SenseiSearchServletParams.PARAM_FACET, facetName,
+        SenseiSearchServletParams.PARAM_FACET_EXPAND), Boolean.toString(spec.isExpandSelection())));
+      qparams.add(new BasicNameValuePair(String.format(format,
+        SenseiSearchServletParams.PARAM_FACET, facetName,
+        SenseiSearchServletParams.PARAM_FACET_MINHIT), Integer.toString(spec.getMinHitCount())));
     }
   }
 
   public static String convertFacetSortSpec(FacetSpec.FacetSortSpec spec) {
-    switch (spec)
-    {
-      case OrderValueAsc:
-        return SenseiSearchServletParams.PARAM_FACET_ORDER_VAL;
-      case OrderHitsDesc:
-        return SenseiSearchServletParams.PARAM_FACET_ORDER_HITS;
-      case OrderByCustom:
-      default:
-        throw new IllegalArgumentException("invalid order string: " + spec);
+    switch (spec) {
+    case OrderValueAsc:
+      return SenseiSearchServletParams.PARAM_FACET_ORDER_VAL;
+    case OrderHitsDesc:
+      return SenseiSearchServletParams.PARAM_FACET_ORDER_HITS;
+    case OrderByCustom:
+    default:
+      throw new IllegalArgumentException("invalid order string: " + spec);
     }
   }
-
-
 
   public static String convertSortField(SortField field) {
     String result;
@@ -551,12 +484,9 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     } else if (field.equals(SenseiRequest.FIELD_DOC_REVERSE)) {
       result = SenseiSearchServletParams.PARAM_SORT_DOC_REVERSE;
     } else {
-      result = String.format(
-          "%s:%s",
-          field.getField(),
-          field.getReverse()
-              ? SenseiSearchServletParams.PARAM_SORT_DESC
-              : SenseiSearchServletParams.PARAM_SORT_ASC);
+      result = String.format("%s:%s", field.getField(),
+        field.getReverse() ? SenseiSearchServletParams.PARAM_SORT_DESC
+            : SenseiSearchServletParams.PARAM_SORT_ASC);
     }
 
     return result;
@@ -570,32 +500,33 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     for (String selectionName : selectionNames) {
       BrowseSelection selection = req.getSelection(selectionName);
 
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_SELECT, selectionName, SenseiSearchServletParams.PARAM_SELECT_NOT),
-          join(selection.getNotValues(), ",")));
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_SELECT, selectionName, SenseiSearchServletParams.PARAM_SELECT_OP),
-          convertSelectionOperation(selection.getSelectionOperation())));
-      qparams.add(new BasicNameValuePair(
-          String.format(format, SenseiSearchServletParams.PARAM_SELECT, selectionName, SenseiSearchServletParams.PARAM_SELECT_VAL),
-          join(selection.getValues(), ",")));
+      qparams.add(new BasicNameValuePair(String.format(format,
+        SenseiSearchServletParams.PARAM_SELECT, selectionName,
+        SenseiSearchServletParams.PARAM_SELECT_NOT), join(selection.getNotValues(), ",")));
+      qparams.add(new BasicNameValuePair(String.format(format,
+        SenseiSearchServletParams.PARAM_SELECT, selectionName,
+        SenseiSearchServletParams.PARAM_SELECT_OP), convertSelectionOperation(selection
+          .getSelectionOperation())));
+      qparams.add(new BasicNameValuePair(String.format(format,
+        SenseiSearchServletParams.PARAM_SELECT, selectionName,
+        SenseiSearchServletParams.PARAM_SELECT_VAL), join(selection.getValues(), ",")));
       if (selection.getSelectionProperties().size() > 0) {
-        qparams.add(new BasicNameValuePair(
-            String.format(format, SenseiSearchServletParams.PARAM_SELECT, selectionName, SenseiSearchServletParams.PARAM_SELECT_PROP),
-            convertSelectionProperties(selection.getSelectionProperties())));
+        qparams.add(new BasicNameValuePair(String.format(format,
+          SenseiSearchServletParams.PARAM_SELECT, selectionName,
+          SenseiSearchServletParams.PARAM_SELECT_PROP), convertSelectionProperties(selection
+            .getSelectionProperties())));
       }
     }
   }
 
   private static String convertSelectionOperation(BrowseSelection.ValueOperation operation) {
-    switch (operation)
-    {
-      case ValueOperationOr:
-        return SenseiSearchServletParams.PARAM_SELECT_OP_OR;
-      case ValueOperationAnd:
-        return SenseiSearchServletParams.PARAM_SELECT_OP_AND;
-      default:
-        throw new IllegalArgumentException("unsupported selection operator");
+    switch (operation) {
+    case ValueOperationOr:
+      return SenseiSearchServletParams.PARAM_SELECT_OP_OR;
+    case ValueOperationAnd:
+      return SenseiSearchServletParams.PARAM_SELECT_OP_AND;
+    default:
+      throw new IllegalArgumentException("unsupported selection operator");
     }
   }
 
@@ -604,8 +535,8 @@ public class HttpRestSenseiServiceImpl implements SenseiService
 
     final String format = "%s:%s";
 
-    Set<Entry<Object,Object>> entries = props.entrySet();
-    for (Entry<Object,Object> entry: entries) {
+    Set<Entry<Object, Object>> entries = props.entrySet();
+    for (Entry<Object, Object> entry : entries) {
       propList.add(String.format(format, entry.getKey(), entry.getValue()));
     }
 
@@ -613,14 +544,12 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   }
 
   public static void convertSenseiQuery(List<NameValuePair> qparams, SenseiQuery query)
-      throws SenseiException
-  {
+      throws SenseiException {
     if (query == null) return;
 
-    try
-    {
+    try {
       JSONObject jsonObj = new FastJSONObject(query.toString());
-      Iterator iter = jsonObj.keys();
+      Iterator<?> iter = jsonObj.keys();
 
       final String format = "%s:%s";
 
@@ -628,60 +557,40 @@ public class HttpRestSenseiServiceImpl implements SenseiService
         String key = (String) iter.next();
 
         if (key.equals("query")) {
-          qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_QUERY, jsonObj.get(key).toString()));
+          qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_QUERY, jsonObj
+              .get(key).toString()));
           continue;
         }
 
-        qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_QUERY_PARAM, String.format(format, key, jsonObj.get(key))));
+        qparams.add(new BasicNameValuePair(SenseiSearchServletParams.PARAM_QUERY_PARAM, String
+            .format(format, key, jsonObj.get(key))));
       }
-    }
-    catch (JSONException e)
-    {
+    } catch (JSONException e) {
       throw new SenseiException(e);
     }
   }
 
-  public URI buildSysInfoRequestURI()
-      throws URISyntaxException
-  {
-    URI uri =
-      URIUtils.createURI(
-        _scheme,
-        _host,
-        _port,
-        _path+"/sysinfo",
-        null,
-        null);
+  public URI buildSysInfoRequestURI() throws URISyntaxException {
+    URI uri = URIUtils.createURI(_scheme, _host, _port, _path + "/sysinfo", null, null);
     return uri;
   }
 
-  public URI buildRequestURI(List<NameValuePair> qparams)
-      throws URISyntaxException
-  {
-    URI uri =
-      URIUtils.createURI(
-        _scheme,
-        _host,
-        _port,
-        _path,
-        URLEncodedUtils.format(qparams, "UTF-8"),
-        null);
+  public URI buildRequestURI(List<NameValuePair> qparams) throws URISyntaxException {
+    URI uri = URIUtils.createURI(_scheme, _host, _port, _path,
+      URLEncodedUtils.format(qparams, "UTF-8"), null);
     return uri;
   }
 
-  public InputStream makeRequest(URI uri)
-      throws IOException
-  {
+  public InputStream makeRequest(URI uri) throws IOException {
 
-	if (log.isDebugEnabled()){
-	  log.debug("sending: "+uri);
-	}
+    if (log.isDebugEnabled()) {
+      log.debug("sending: " + uri);
+    }
 
     HttpGet httpget = new HttpGet(uri);
     HttpResponse response = _httpclient.execute(httpget);
     HttpEntity entity = response.getEntity();
-    if (entity == null)
-    {
+    if (entity == null) {
       throw new IOException("failed to complete request");
     }
 
@@ -714,99 +623,94 @@ public class HttpRestSenseiServiceImpl implements SenseiService
 
   public static String join(Collection<?> s, String delimiter) {
     StringBuilder builder = new StringBuilder();
-    Iterator iter = s.iterator();
+    Iterator<?> iter = s.iterator();
     while (iter.hasNext()) {
-       builder.append(iter.next().toString());
-       if (!iter.hasNext()) {
-         break;
-       }
-       builder.append(delimiter);
+      builder.append(iter.next().toString());
+      if (!iter.hasNext()) {
+        break;
+      }
+      builder.append(delimiter);
     }
     return builder.toString();
   }
 
-  public static String convertStreamToString(InputStream is)
-      throws IOException
-  {
+  public static String convertStreamToString(InputStream is) throws IOException {
     BufferedReader reader = new BufferedReader(new InputStreamReader(is));
     StringBuilder sb = new StringBuilder();
-    char[] buf = new char[1024];  //1k buffer
-     try
-    {
-     
-      while(true){
-    	  int count = reader.read(buf);
-    	  if (count<0) break;
-    	  sb.append(buf, 0, count);
+    char[] buf = new char[1024]; // 1k buffer
+    try {
+
+      while (true) {
+        int count = reader.read(buf);
+        if (count < 0) break;
+        sb.append(buf, 0, count);
       }
-    }
-    finally
-    {
+    } finally {
       is.close();
     }
 
     String json = sb.toString();
-    if (log.isDebugEnabled()){
-      log.debug("received: "+json);
+    if (log.isDebugEnabled()) {
+      log.debug("received: " + json);
     }
     return json;
   }
 
-  public static JSONObject convertStreamToJSONObject(InputStream is)
-      throws IOException, JSONException
-  {
+  public static JSONObject convertStreamToJSONObject(InputStream is) throws IOException,
+      JSONException {
     String rawJSON = convertStreamToString(is);
     return new FastJSONObject(rawJSON);
   }
 
-  public static SenseiResult buildSenseiResult(JSONObject jsonObj)
-      throws JSONException
-  {
+  public static SenseiResult buildSenseiResult(JSONObject jsonObj) throws JSONException {
     SenseiResult result = new SenseiResult();
 
     result.setTid(Long.parseLong(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_TID)));
     result.setTotalDocsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_TOTALDOCS));
     result.setParsedQuery(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_PARSEDQUERY));
     result.setNumHitsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMHITS));
-    if (jsonObj.has(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS))
-    {
+    if (jsonObj.has(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS)) {
       result.setNumGroupsLong(jsonObj.getInt(SenseiSearchServletParams.PARAM_RESULT_NUMGROUPS));
     }
     result.setTime(Long.parseLong(jsonObj.getString(SenseiSearchServletParams.PARAM_RESULT_TIME)));
-    result.addAll(convertFacetMap(jsonObj.getJSONObject(SenseiSearchServletParams.PARAM_RESULT_FACETS)));
-    result.setHits(convertHitsArray(jsonObj.getJSONArray(SenseiSearchServletParams.PARAM_RESULT_HITS)));
+    result.addAll(convertFacetMap(jsonObj
+        .getJSONObject(SenseiSearchServletParams.PARAM_RESULT_FACETS)));
+    result.setHits(convertHitsArray(jsonObj
+        .getJSONArray(SenseiSearchServletParams.PARAM_RESULT_HITS)));
 
     return result;
   }
 
-  public static SenseiSystemInfo buildSysInfo(JSONObject jsonObj)
-      throws JSONException
-  {
+  public static SenseiSystemInfo buildSysInfo(JSONObject jsonObj) throws JSONException {
     SenseiSystemInfo result = new SenseiSystemInfo();
 
     result.setNumDocs(jsonObj.getInt(SenseiSearchServletParams.PARAM_SYSINFO_NUMDOCS));
-    result.setLastModified(Long.parseLong(jsonObj.getString(SenseiSearchServletParams.PARAM_SYSINFO_LASTMODIFIED)));
+    result.setLastModified(Long.parseLong(jsonObj
+        .getString(SenseiSearchServletParams.PARAM_SYSINFO_LASTMODIFIED)));
     result.setVersion(jsonObj.getString(SenseiSearchServletParams.PARAM_SYSINFO_VERSION));
-    result.setFacetInfos(convertFacetInfos(jsonObj.getJSONArray(SenseiSearchServletParams.PARAM_SYSINFO_FACETS)));
-    result.setClusterInfo(convertClusterInfo(jsonObj.getJSONArray(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO)));
+    result.setFacetInfos(convertFacetInfos(jsonObj
+        .getJSONArray(SenseiSearchServletParams.PARAM_SYSINFO_FACETS)));
+    result.setClusterInfo(convertClusterInfo(jsonObj
+        .getJSONArray(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO)));
 
     return result;
   }
 
   private static Set<SenseiSystemInfo.SenseiFacetInfo> convertFacetInfos(JSONArray array)
-      throws JSONException
-  {
-    if (array == null || array.length() == 0)
-      return Collections.EMPTY_SET;
+      throws JSONException {
+    if (array == null || array.length() == 0) {
+      return Collections.emptySet();
+    }
 
-    Set<SenseiSystemInfo.SenseiFacetInfo> infos = new HashSet<SenseiSystemInfo.SenseiFacetInfo>(array.length());
-    for (int i=0; i<array.length(); ++i)
-    {
+    Set<SenseiSystemInfo.SenseiFacetInfo> infos = new HashSet<SenseiSystemInfo.SenseiFacetInfo>(
+        array.length());
+    for (int i = 0; i < array.length(); ++i) {
       JSONObject info = array.getJSONObject(i);
-      SenseiSystemInfo.SenseiFacetInfo facetInfo =
-        new SenseiSystemInfo.SenseiFacetInfo(info.getString(SenseiSearchServletParams.PARAM_SYSINFO_FACETS_NAME));
+      SenseiSystemInfo.SenseiFacetInfo facetInfo = new SenseiSystemInfo.SenseiFacetInfo(
+          info.getString(SenseiSearchServletParams.PARAM_SYSINFO_FACETS_NAME));
       facetInfo.setRunTime(info.optBoolean(SenseiSearchServletParams.PARAM_SYSINFO_FACETS_RUNTIME));
-      facetInfo.setProps(convertJsonToStringMap(info.optJSONObject(SenseiSearchServletParams.PARAM_SYSINFO_FACETS_PROPS)));
+      facetInfo.setProps(convertJsonToStringMap(info
+          .optJSONObject(SenseiSearchServletParams.PARAM_SYSINFO_FACETS_PROPS)));
 
       infos.add(facetInfo);
     }
@@ -815,17 +719,16 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   }
 
   private static Map<String, String> convertJsonToStringMap(JSONObject jsonObject)
-      throws JSONException
-  {
-    if (jsonObject == null)
-      return Collections.EMPTY_MAP;
+      throws JSONException {
+    if (jsonObject == null) {
+      return Collections.emptyMap();
+    }
 
     @SuppressWarnings("unchecked")
     Iterator<String> nameItr = jsonObject.keys();
 
     Map<String, String> outMap = new HashMap<String, String>();
-    while(nameItr.hasNext())
-    {
+    while (nameItr.hasNext()) {
       String name = nameItr.next();
       outMap.put(name, jsonObject.getString(name));
     }
@@ -834,47 +737,42 @@ public class HttpRestSenseiServiceImpl implements SenseiService
   }
 
   private static List<SenseiSystemInfo.SenseiNodeInfo> convertClusterInfo(JSONArray array)
-      throws JSONException
-  {
-    if (array == null || array.length() == 0)
-      return Collections.EMPTY_LIST;
+      throws JSONException {
+    if (array == null || array.length() == 0) {
+      return Collections.emptyList();
+    }
 
-    List<SenseiSystemInfo.SenseiNodeInfo> clusterInfo = new ArrayList(array.length());
-    for (int i=0; i<array.length(); ++i)
-    {
+    List<SenseiSystemInfo.SenseiNodeInfo> clusterInfo = new ArrayList<SenseiSystemInfo.SenseiNodeInfo>(array.length());
+    for (int i = 0; i < array.length(); ++i) {
       JSONObject node = array.getJSONObject(i);
-      JSONArray partitionsArray = node.getJSONArray(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_PARTITIONS);
+      JSONArray partitionsArray = node
+          .getJSONArray(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_PARTITIONS);
       int[] partitions = null;
-      if (partitionsArray != null)
-      {
+      if (partitionsArray != null) {
         partitions = new int[partitionsArray.length()];
-        for(int j=0; j<partitionsArray.length(); ++j)
-        {
+        for (int j = 0; j < partitionsArray.length(); ++j) {
           partitions[j] = partitionsArray.getInt(j);
         }
       }
 
-      clusterInfo.add(new SenseiSystemInfo.SenseiNodeInfo(
-        node.getInt(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_ID),
-        partitions,
-        node.getString(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_NODELINK),
-        node.getString(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_ADMINLINK)
-      ));
+      clusterInfo.add(new SenseiSystemInfo.SenseiNodeInfo(node
+          .getInt(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_ID), partitions, node
+          .getString(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_NODELINK), node
+          .getString(SenseiSearchServletParams.PARAM_SYSINFO_CLUSTERINFO_ADMINLINK)));
     }
 
     return clusterInfo;
   }
 
   private static Map<String, FacetAccessible> convertFacetMap(JSONObject jsonObject)
-      throws JSONException
-  {
-    Map<String, FacetAccessible> map = new HashMap <String, FacetAccessible>();
+      throws JSONException {
+    Map<String, FacetAccessible> map = new HashMap<String, FacetAccessible>();
 
-    Iterator iter = jsonObject.sortedKeys();
+    Iterator<?> iter = jsonObject.sortedKeys();
 
-    while(iter.hasNext()) {
+    while (iter.hasNext()) {
       String fieldName = (String) iter.next();
-      JSONArray facetArr = (JSONArray)jsonObject.get(fieldName);
+      JSONArray facetArr = (JSONArray) jsonObject.get(fieldName);
       int length = facetArr.length();
 
       BrowseFacet[] facets = new BrowseFacet[length];
@@ -882,7 +780,8 @@ public class HttpRestSenseiServiceImpl implements SenseiService
       for (int i = 0; i < length; i++) {
         JSONObject facetObj = (JSONObject) facetArr.get(i);
         BrowseFacet bf = new BrowseFacet();
-        bf.setFacetValueHitCount(facetObj.getInt(SenseiSearchServletParams.PARAM_RESULT_FACET_INFO_COUNT));
+        bf.setFacetValueHitCount(facetObj
+            .getInt(SenseiSearchServletParams.PARAM_RESULT_FACET_INFO_COUNT));
         bf.setValue(facetObj.getString(SenseiSearchServletParams.PARAM_RESULT_FACET_INFO_VALUE));
         facets[i] = bf;
       }
@@ -895,94 +794,84 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     return map;
   }
 
-  private static SenseiHit[] convertHitsArray(JSONArray hitsArray)
-      throws JSONException
-  {
+  private static SenseiHit[] convertHitsArray(JSONArray hitsArray) throws JSONException {
     int hitsArrayLength = hitsArray.length();
 
     SenseiHit[] result = new SenseiHit[hitsArrayLength];
 
     for (int i = 0; i < hitsArrayLength; i++) {
-      JSONObject hitObj = (JSONObject)hitsArray.get(i);
+      JSONObject hitObj = (JSONObject) hitsArray.get(i);
 
       SenseiHit hit = new SenseiHit();
-      Iterator keys = hitObj.keys();
-      Map<String,String[]> fieldMap = new HashMap<String,String[]>();
-      while(keys.hasNext()){
-    	  String key = (String)keys.next();
-    	  if (SenseiSearchServletParams.PARAM_RESULT_HIT_UID.equals(key)){
-    		  hit.setUID(Long.parseLong(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_UID)));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_DOCID.equals(key)){
-    		  hit.setDocid(hitObj.getInt(SenseiSearchServletParams.PARAM_RESULT_HIT_DOCID));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_SCORE.equals(key)){
-    		  hit.setScore((float) hitObj.getDouble(SenseiSearchServletParams.PARAM_RESULT_HIT_SCORE));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_SRC_DATA.equals(key)){
-    		  hit.setSrcData(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_SRC_DATA));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS.equals(key)){
-    		  hit.setStoredFields(convertStoredFields(hitObj.optJSONArray(SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS)));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPFIELD.equals(key)){
-    		  hit.setGroupValue(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPFIELD));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPVALUE.equals(key)){
-    		  hit.setGroupValue(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPVALUE));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITSCOUNT.equals(key)){
-    		  hit.setGroupHitsCount(hitObj.getInt(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITSCOUNT));
-    	  }
-    	  else if (SenseiSearchServletParams.PARAM_RESULT_HIT_EXPLANATION.equals(key)){
-    		  hit.setExplanation(convertToExplanation(hitObj.optJSONObject(SenseiSearchServletParams.PARAM_RESULT_HIT_EXPLANATION)));
-    	  }
-        else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITS.equals(key)) {
-          hit.setGroupHits(convertHitsArray(hitObj.getJSONArray(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITS)));
+      Iterator<?> keys = hitObj.keys();
+      Map<String, String[]> fieldMap = new HashMap<String, String[]>();
+      while (keys.hasNext()) {
+        String key = (String) keys.next();
+        if (SenseiSearchServletParams.PARAM_RESULT_HIT_UID.equals(key)) {
+          hit.setUID(Long.parseLong(hitObj
+              .getString(SenseiSearchServletParams.PARAM_RESULT_HIT_UID)));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_DOCID.equals(key)) {
+          hit.setDocid(hitObj.getInt(SenseiSearchServletParams.PARAM_RESULT_HIT_DOCID));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_SCORE.equals(key)) {
+          hit.setScore((float) hitObj.getDouble(SenseiSearchServletParams.PARAM_RESULT_HIT_SCORE));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_SRC_DATA.equals(key)) {
+          hit.setSrcData(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_SRC_DATA));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS.equals(key)) {
+          hit.setStoredFields(convertStoredFields(hitObj
+              .optJSONArray(SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS)));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPFIELD.equals(key)) {
+          hit.setGroupValue(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPFIELD));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPVALUE.equals(key)) {
+          hit.setGroupValue(hitObj.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPVALUE));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITSCOUNT.equals(key)) {
+          hit.setGroupHitsCount(hitObj
+              .getInt(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITSCOUNT));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_EXPLANATION.equals(key)) {
+          hit.setExplanation(convertToExplanation(hitObj
+              .optJSONObject(SenseiSearchServletParams.PARAM_RESULT_HIT_EXPLANATION)));
+        } else if (SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITS.equals(key)) {
+          hit.setGroupHits(convertHitsArray(hitObj
+              .getJSONArray(SenseiSearchServletParams.PARAM_RESULT_HIT_GROUPHITS)));
+        } else {
+          JSONArray array = hitObj.optJSONArray(key);
+          if (array != null) {
+            String[] arr = new String[array.length()];
+            for (int k = 0; k < arr.length; ++k) {
+              arr[k] = array.getString(k);
+            }
+            fieldMap.put(key, arr);
+          }
         }
-    	  else{
-    		  JSONArray array = hitObj.optJSONArray(key);
-    		  if (array!=null){
-    			  String [] arr = new String[array.length()];
-    			  for (int k=0;k<arr.length;++k){
-    				  arr[k]=array.getString(k);
-    			  }
-        		  fieldMap.put(key, arr);  
-    		  }
-    	  }
       }
-      
+
       hit.setFieldValues(fieldMap);
-      //hit.setFieldValues(convertRawFieldValues());
+      // hit.setFieldValues(convertRawFieldValues());
 
       result[i] = hit;
     }
 
     return result;
   }
- 
 
-  public static Document convertStoredFields(JSONArray jsonArray)
-      throws JSONException
-  {
+  public static Document convertStoredFields(JSONArray jsonArray) throws JSONException {
     int length = jsonArray.length();
 
     Document doc = new Document();
 
     for (int i = 0; i < length; i++) {
       JSONObject jsonObject = (JSONObject) jsonArray.get(i);
-      String name = jsonObject.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS_NAME);
-      String value = jsonObject.getString(SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS_VALUE);
-      doc.add(new org.apache.lucene.document.Field(name, value, Field.Store.YES, Field.Index.ANALYZED));
+      String name = jsonObject
+          .getString(SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS_NAME);
+      String value = jsonObject
+          .getString(SenseiSearchServletParams.PARAM_RESULT_HIT_STORED_FIELDS_VALUE);
+      doc.add(new org.apache.lucene.document.TextField(name, value, Field.Store.YES));
     }
 
     return doc;
   }
 
-  public static Explanation convertToExplanation(JSONObject jsonObj)
-      throws JSONException
-  {
-	if (jsonObj == null) return null;
+  public static Explanation convertToExplanation(JSONObject jsonObj) throws JSONException {
+    if (jsonObj == null) return null;
     Explanation explanation = new Explanation();
 
     float value = (float) jsonObj.optDouble(SenseiSearchServletParams.PARAM_RESULT_HITS_EXPL_VALUE);
@@ -992,7 +881,8 @@ public class HttpRestSenseiServiceImpl implements SenseiService
     explanation.setValue(value);
 
     if (jsonObj.has(SenseiSearchServletParams.PARAM_RESULT_HITS_EXPL_DETAILS)) {
-      JSONArray detailsArr = jsonObj.getJSONArray(SenseiSearchServletParams.PARAM_RESULT_HITS_EXPL_DETAILS);
+      JSONArray detailsArr = jsonObj
+          .getJSONArray(SenseiSearchServletParams.PARAM_RESULT_HITS_EXPL_DETAILS);
       int detailsCnt = detailsArr.length();
 
       for (int i = 0; i < detailsCnt; i++) {

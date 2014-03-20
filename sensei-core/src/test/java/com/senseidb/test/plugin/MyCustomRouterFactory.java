@@ -17,7 +17,7 @@ public class MyCustomRouterFactory implements SenseiPlugin {
 
   @Override
   public void start() {
-   started = true;
+    started = true;
 
   }
 

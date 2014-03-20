@@ -2,14 +2,14 @@ package com.senseidb.search.req.mapred;
 
 import proj.zoie.api.DocIDMapper;
 
-import com.browseengine.bobo.api.BoboIndexReader;
+import com.browseengine.bobo.api.BoboSegmentReader;
 import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.data.FacetDataCache;
 import com.browseengine.bobo.facets.data.TermValueList;
 
 public interface FieldAccessor {
 
-  public FacetDataCache getValueCache(String name);
+  public FacetDataCache<?> getValueCache(String name);
 
   /**
    * Get facet value for the document
@@ -91,22 +91,23 @@ public interface FieldAccessor {
 
   public Object[] getArrayByUID(String fieldName, long uid);
 
-  public TermValueList getTermValueList(String fieldName);
+  public TermValueList<?> getTermValueList(String fieldName);
 
   /**
    * @param facetName
    * @return
    * @throws IllegalStateException if the facet can not be found
    */
-  public FacetHandler getFacetHandler(String facetName);
+  public FacetHandler<?> getFacetHandler(String facetName);
 
-  public BoboIndexReader getBoboIndexReader();
+  public BoboSegmentReader getBoboIndexReader();
 
   /**
    * Returns the docIdtoUID mapper
    * @return
    */
   public DocIDMapper getMapper();
+
   public SingleFieldAccessor getSingleFieldAccessor(String facetName);
 
 }

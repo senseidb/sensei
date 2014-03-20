@@ -25,9 +25,9 @@ public class Facet {
    * <br>• val: order-by values
    */
   OrderBy order;
-  
+
   Map<String, String> properties = new HashMap<String, String>();
-  
+
   public static enum OrderBy {
     hits, val
   }
@@ -59,10 +59,12 @@ public class Facet {
       facet.order = OrderBy.val;
       return this;
     }
+
     public Builder addProperty(String name, String value) {
       facet.properties.put(name, value);
       return this;
     }
+
     public Facet build() {
       return facet;
     }

@@ -4,7 +4,8 @@ import com.browseengine.bobo.facets.FacetHandlerInitializerParam;
 import com.browseengine.bobo.facets.RuntimeFacetHandler;
 import com.browseengine.bobo.facets.AbstractRuntimeFacetHandlerFactory;
 
-public class MockRuntimeFacetHandlerFactory extends AbstractRuntimeFacetHandlerFactory<FacetHandlerInitializerParam, RuntimeFacetHandler<?>> {
+public class MockRuntimeFacetHandlerFactory extends
+    AbstractRuntimeFacetHandlerFactory<FacetHandlerInitializerParam, RuntimeFacetHandler<?>> {
 
   @Override
   public String getName() {
@@ -13,7 +14,7 @@ public class MockRuntimeFacetHandlerFactory extends AbstractRuntimeFacetHandlerF
 
   @Override
   public RuntimeFacetHandler<?> get(FacetHandlerInitializerParam params) {
-    
+
     return null;
   }
 }

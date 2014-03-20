@@ -16,17 +16,22 @@ import com.senseidb.util.JSONUtil.FastJSONObject;
 
 public class MaxMapReduce implements SenseiMapReduce<MaxResult, MaxResult> {
 
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
   private String column;
 
   @Override
-  public MaxResult map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public MaxResult map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor,
+      FacetCountAccessor facetCountAccessor) {
     double max = Double.MIN_VALUE;
     double tmp = 0;
     long uid = 0l;
     SingleFieldAccessor singleFieldAccessor = accessor.getSingleFieldAccessor(column);
-    for (int i =0; i < docIdCount; i++) {
+    for (int i = 0; i < docIdCount; i++) {
       tmp = singleFieldAccessor.getDouble(docIds.get(i));
-      if (max < tmp) {       
+      if (max < tmp) {
         max = tmp;
         if (uids != null && !(uids.length == 1 && uids[0] == Long.MIN_VALUE)) {
           uid = uids[docIds.get(i)];
@@ -48,7 +53,7 @@ public class MaxMapReduce implements SenseiMapReduce<MaxResult, MaxResult> {
       if (ret.value < mapResults.get(i).value) {
         ret = mapResults.get(i);
       }
-    } 
+    }
     return java.util.Arrays.asList(ret);
   }
 
@@ -68,12 +73,13 @@ public class MaxMapReduce implements SenseiMapReduce<MaxResult, MaxResult> {
 
   @Override
   public JSONObject render(MaxResult reduceResult) {
-    
+
     try {
-     if (reduceResult == null ) {
-       return new FastJSONObject().put("max", "null");
-     }
-      return new FastJSONObject().put("max",  String.format("%1.5f", reduceResult.value)).put("uid", reduceResult.uid);
+      if (reduceResult == null) {
+        return new FastJSONObject().put("max", "null");
+      }
+      return new FastJSONObject().put("max", String.format("%1.5f", reduceResult.value)).put("uid",
+        reduceResult.uid);
     } catch (JSONException ex) {
       throw new RuntimeException(ex);
     }
@@ -81,20 +87,26 @@ public class MaxMapReduce implements SenseiMapReduce<MaxResult, MaxResult> {
 
   @Override
   public void init(JSONObject params) {
-     column = params.optString("column");
+    column = params.optString("column");
     if (column == null) {
       throw new IllegalStateException("Column parameter shouldn't be null");
     }
   }
- 
+
 }
+
 class MaxResult implements Serializable {
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
   public double value;
   public long uid;
+
   public MaxResult(double value, long uid) {
     super();
     this.value = value;
     this.uid = uid;
   }
-  
+
 }

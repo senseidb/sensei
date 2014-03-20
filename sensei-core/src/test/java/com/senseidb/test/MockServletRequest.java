@@ -1,29 +1,27 @@
 package com.senseidb.test;
 
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletInputStream;
 import javax.servlet.ServletRequest;
-import org.apache.http.NameValuePair;
 
+import org.apache.http.NameValuePair;
 
 /**
  * Created by IntelliJ IDEA. User: bguarrac Date: 4/8/11 Time: 3:47 PM To change this template use File | Settings |
  * File Templates.
  */
-public class MockServletRequest implements ServletRequest
-{
+public class MockServletRequest implements ServletRequest {
   Map<String, List<String>> _map;
 
   public MockServletRequest(Map<String, List<String>> map) {
@@ -39,8 +37,7 @@ public class MockServletRequest implements ServletRequest
         map.put(name, new ArrayList<String>());
       }
 
-      for (String value: pair.getValue().split(","))
-      {
+      for (String value : pair.getValue().split(",")) {
         map.get(name).add(value);
       }
     }
@@ -49,203 +46,168 @@ public class MockServletRequest implements ServletRequest
   }
 
   @Override
-  public Object getAttribute(String s)
-  {
+  public Object getAttribute(String s) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Enumeration getAttributeNames()
-  {
+  public Enumeration<?> getAttributeNames() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getCharacterEncoding()
-  {
+  public String getCharacterEncoding() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void setCharacterEncoding(String s)
-      throws UnsupportedEncodingException
-  {
+  public void setCharacterEncoding(String s) throws UnsupportedEncodingException {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public int getContentLength()
-  {
+  public int getContentLength() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getContentType()
-  {
+  public String getContentType() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ServletInputStream getInputStream()
-      throws IOException
-  {
+  public ServletInputStream getInputStream() throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getParameter(String s)
-  {
+  public String getParameter(String s) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Enumeration getParameterNames()
-  {
+  public Enumeration<?> getParameterNames() {
     return new EnumerationWrapper(_map.keySet().iterator());
   }
 
-  public class EnumerationWrapper implements Enumeration {
+  public class EnumerationWrapper implements Enumeration<Object> {
 
-    Iterator _iterator;
+    Iterator<String> _iterator;
 
-    public EnumerationWrapper(Iterator iter) {
+    public EnumerationWrapper(Iterator<String> iter) {
       _iterator = iter;
     }
 
     @Override
-    public boolean hasMoreElements()
-    {
+    public boolean hasMoreElements() {
       return _iterator.hasNext();
     }
 
     @Override
-    public Object nextElement()
-    {
+    public Object nextElement() {
       return _iterator.next();
     }
   };
 
   @Override
-  public String[] getParameterValues(String s)
-  {
+  public String[] getParameterValues(String s) {
     List<String> value = _map.get(s);
-    if (value == null)
-      return new String[0];
+    if (value == null) return new String[0];
     return value.toArray(new String[value.size()]);
   }
 
   @Override
-  public Map getParameterMap()
-  {
+  public Map<?, ?> getParameterMap() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getProtocol()
-  {
+  public String getProtocol() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getScheme()
-  {
+  public String getScheme() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getServerName()
-  {
+  public String getServerName() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public int getServerPort()
-  {
+  public int getServerPort() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public BufferedReader getReader()
-      throws IOException
-  {
+  public BufferedReader getReader() throws IOException {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getRemoteAddr()
-  {
+  public String getRemoteAddr() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getRemoteHost()
-  {
+  public String getRemoteHost() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void setAttribute(String s, Object o)
-  {
+  public void setAttribute(String s, Object o) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void removeAttribute(String s)
-  {
+  public void removeAttribute(String s) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Locale getLocale()
-  {
+  public Locale getLocale() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Enumeration getLocales()
-  {
+  public Enumeration<?> getLocales() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean isSecure()
-  {
+  public boolean isSecure() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public RequestDispatcher getRequestDispatcher(String s)
-  {
+  public RequestDispatcher getRequestDispatcher(String s) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getRealPath(String s)
-  {
+  public String getRealPath(String s) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public int getRemotePort()
-  {
+  public int getRemotePort() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getLocalName()
-  {
+  public String getLocalName() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public String getLocalAddr()
-  {
+  public String getLocalAddr() {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public int getLocalPort()
-  {
+  public int getLocalPort() {
     throw new UnsupportedOperationException();
   }
 }

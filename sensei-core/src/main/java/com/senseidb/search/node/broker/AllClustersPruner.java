@@ -7,12 +7,12 @@ import com.senseidb.search.req.SenseiRequest;
 public class AllClustersPruner implements LayeredClusterPruner {
 
   @Override
-  public List<String> pruneClusters(SenseiRequest request, List<String> clusters) {    
+  public List<String> pruneClusters(SenseiRequest request, List<String> clusters) {
     return clusters;
   }
 
   @Override
-  public boolean clusterPrioritiesEqual(SenseiRequest request) {   
+  public boolean clusterPrioritiesEqual(SenseiRequest request) {
     return false;
   }
 

@@ -15,31 +15,35 @@ public class Clock {
   static {
     SimpleDateFormat formatter = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
     try {
-      startTime = formatter.parse("2010.01.01.00.00.00").getTime();     
+      startTime = formatter.parse("2010.01.01.00.00.00").getTime();
     } catch (ParseException e) {
       throw new RuntimeException(e);
     }
   }
+
   public static int getCurrentTimeInMinutes() {
     if (predefinedTimeInMinutes != null) {
       return predefinedTimeInMinutes;
     }
-    return (int)((getTime() - startTime) / 1000/60);
+    return (int) ((getTime() - startTime) / 1000 / 60);
   }
+
   public static Integer getPredefinedTimeInMinutes() {
     return predefinedTimeInMinutes;
   }
+
   public static void setPredefinedTimeInMinutes(Integer predefinedTimeInMinutes) {
     Clock.predefinedTimeInMinutes = predefinedTimeInMinutes;
   }
+
   public static long getTime() {
     if (predefinedTime == null) {
       return System.currentTimeMillis();
     }
     return predefinedTime;
   }
-  
+
   public static void setPredefinedTime(Long predefinedTime) {
     Clock.predefinedTime = predefinedTime;
-  }  
+  }
 }

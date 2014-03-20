@@ -13,7 +13,7 @@ import org.json.JSONObject;
 import org.springframework.util.Assert;
 
 import proj.zoie.api.Zoie;
-import proj.zoie.api.ZoieIndexReader;
+import proj.zoie.api.ZoieMultiReader;
 import proj.zoie.hourglass.impl.Hourglass;
 import proj.zoie.hourglass.impl.HourglassListener;
 import proj.zoie.impl.indexing.ZoieSystem;
@@ -26,7 +26,7 @@ public class PersistentCache {
   private final Comparator<String> versionComparator;
   private String currentPersistentVersion = null;
   private EventBatch eventBatch = new EventBatch();
-  
+
   public PersistentCache(File indexDir, Comparator<String> versionComparator) {
     this.indexDir = indexDir;
     indexDir.mkdirs();
@@ -42,15 +42,17 @@ public class PersistentCache {
     eventBatch = new EventBatch();
   }
 
-  public synchronized List<Pair<String, String>> getEventsNotAvailableInZoie(String zoiePersistentVersion) {
-    try {      
+  public synchronized List<Pair<String, String>> getEventsNotAvailableInZoie(
+      String zoiePersistentVersion) {
+    try {
       Collection<String> availableBatches = EventBatch.getAvailableBatches(indexDir);
       List<Pair<String, String>> ret = new ArrayList<Pair<String, String>>();
       List<String> batches = new ArrayList<String>(availableBatches);
       Collections.sort(batches, new Comparator<String>() {
         @Override
         public int compare(String o1, String o2) {
-          return versionComparator.compare(EventBatch.getVersionInfo(o1).getFirst(), EventBatch.getVersionInfo(o2).getFirst());
+          return versionComparator.compare(EventBatch.getVersionInfo(o1).getFirst(), EventBatch
+              .getVersionInfo(o2).getFirst());
         }
       });
       for (String batch : batches) {
@@ -69,40 +71,49 @@ public class PersistentCache {
 
   public synchronized void updateDiskVersion(String version) {
     log.debug("Updating the disk version to " + version);
-    if (currentPersistentVersion == null || versionComparator.compare(currentPersistentVersion, version) < 0) {
+    if (currentPersistentVersion == null
+        || versionComparator.compare(currentPersistentVersion, version) < 0) {
       currentPersistentVersion = version;
       purgeObsoleteFiles();
     }
   }
 
   public void purgeObsoleteFiles() {
-    Collection<String> obsoleteFiles = EventBatch.getObsoleteFiles(EventBatch.getAvailableBatches(indexDir), versionComparator,
-        currentPersistentVersion);
+    Collection<String> obsoleteFiles = EventBatch.getObsoleteFiles(
+      EventBatch.getAvailableBatches(indexDir), versionComparator, currentPersistentVersion);
     for (String fileName : obsoleteFiles) {
-      Assert.state(FileUtils.deleteQuietly(new File(indexDir, fileName)), "couldn't delete the file - " + fileName);
+      Assert.state(FileUtils.deleteQuietly(new File(indexDir, fileName)),
+        "couldn't delete the file - " + fileName);
     }
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   public static void registerAsListener(final PersistentCache persistentCache, Zoie zoie) {
     if (zoie instanceof Hourglass) {
       Hourglass hourglass = (Hourglass) zoie;
       hourglass.addHourglassListener(new HourglassListener() {
         @Override
         public void onNewZoie(Zoie newZoie) {
-          ((ZoieSystem) newZoie).addIndexingEventListener(new PersistentCacheZoieListener(persistentCache));
+          ((ZoieSystem) newZoie).addIndexingEventListener(new PersistentCacheZoieListener(
+              persistentCache));
         }
+
         @Override
         public void onRetiredZoie(Zoie oldZoie) {
         }
+
         @Override
-        public void onIndexReaderCleanUp(ZoieIndexReader indexReader) {
+        public void onIndexReaderCleanUp(ZoieMultiReader indexReader) {
+
         }
       });
     } else {
-      ((ZoieSystem) zoie).addIndexingEventListener(new PersistentCacheZoieListener(persistentCache));
+      ((ZoieSystem) zoie)
+          .addIndexingEventListener(new PersistentCacheZoieListener(persistentCache));
     }
   }
+
   public int numberOfAvailableBatches() {
-    return eventBatch.getAvailableBatches(indexDir).size();
+    return EventBatch.getAvailableBatches(indexDir).size();
   }
 }

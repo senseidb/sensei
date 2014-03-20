@@ -1,5 +1,6 @@
 package com.senseidb.search.client.req;
 
+@SuppressWarnings("unused")
 public class Path extends Selection {
 
   private String value;
@@ -21,5 +22,5 @@ public class Path extends Selection {
   public String getValue() {
     return value;
   }
-  
+
 }

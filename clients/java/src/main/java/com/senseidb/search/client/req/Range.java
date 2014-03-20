@@ -1,7 +1,6 @@
 package com.senseidb.search.client.req;
 
 import com.senseidb.search.client.json.JsonField;
-import com.senseidb.search.client.req.query.Query;
 
 /**
  * <p>
@@ -50,30 +49,34 @@ import com.senseidb.search.client.req.query.Query;
  *
  *
  */
-  public class Range extends Selection  {
+public class Range extends Selection {
 
-    private String from;
-      private String to;
-      @JsonField("include_lower")
-      private boolean includeLower;
-      @JsonField("include_upper")
-      private boolean includeUpper;
+  private String from;
+  private String to;
+  @JsonField("include_lower")
+  private boolean includeLower;
+  @JsonField("include_upper")
+  private boolean includeUpper;
 
-      private Double boost;
-      @JsonField("_noOptimize")
-      private Boolean notOptimize;
-      private String type;
-     public Range() {
-     }
-  public Range(String from, String to, boolean includeLower, boolean includeUpper) {
-      super();
+  private Double boost;
+  @JsonField("_noOptimize")
+  private Boolean notOptimize;
+  private String type;
 
-      this.from = from;
-      this.to = to;
-      this.includeLower = includeLower;
-      this.includeUpper = includeUpper;
+  public Range() {
   }
-  public Range(String from, String to, boolean includeLower, boolean includeUpper, double Doost, boolean noOptimize) {
+
+  public Range(String from, String to, boolean includeLower, boolean includeUpper) {
+    super();
+
+    this.from = from;
+    this.to = to;
+    this.includeLower = includeLower;
+    this.includeUpper = includeUpper;
+  }
+
+  public Range(String from, String to, boolean includeLower, boolean includeUpper, double boost,
+      boolean noOptimize) {
     super();
 
     this.from = from;
@@ -82,8 +85,10 @@ import com.senseidb.search.client.req.query.Query;
     this.includeUpper = includeUpper;
     this.boost = boost;
     notOptimize = noOptimize;
-}
-  public Range(String from, String to, boolean includeLower, boolean includeUpper, Double boost, boolean noOptimize, String type) {
+  }
+
+  public Range(String from, String to, boolean includeLower, boolean includeUpper, Double boost,
+      boolean noOptimize, String type) {
     super();
 
     this.from = from;
@@ -93,27 +98,34 @@ import com.senseidb.search.client.req.query.Query;
     this.boost = boost;
     notOptimize = noOptimize;
     this.type = type;
-}
+  }
+
   public String getFrom() {
     return from;
   }
+
   public String getTo() {
     return to;
   }
+
   public boolean isIncludeLower() {
     return includeLower;
   }
+
   public boolean isIncludeUpper() {
     return includeUpper;
   }
+
   public Double getBoost() {
     return boost;
   }
+
   public Boolean getNotOptimize() {
     return notOptimize;
   }
+
   public String getType() {
     return type;
   }
-  
-  }
+
+}

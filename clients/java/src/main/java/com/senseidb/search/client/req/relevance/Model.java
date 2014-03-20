@@ -7,21 +7,20 @@ import java.util.List;
 import java.util.Map;
 
 import com.senseidb.search.client.json.JsonField;
-import com.senseidb.search.client.req.FacetType;
 
 /**
  * The relevance json has two parts, one is the model part, another is the
  * values part. Model part should be relatively static. The values part provides
  * the input required by the static model. Each request may have different
  * values part, but may probably use the same model.
- * 
+ *
  * Inside the model part, we define 4 items:
- * 
+ *
  * <ol>
  * <li>variables — User provided variable, the variable name and type are defined
  * here, but the actual values has to be filled outside the model part, but in
  * the values part.
- * 
+ *
  * <li>facets — Define what facet/column will be used in the relevance model. It
  * automatically defined the variable name the same as the facet name.
  *
@@ -35,11 +34,12 @@ import com.senseidb.search.client.req.FacetType;
  * class list.
  *  <ol>
  */
+@SuppressWarnings("unused")
 public class Model {
-  private Map<String, List<String>> variables = new HashMap<String, List<String>>();;
-  private Map<String, List<String>> facets = new HashMap<String, List<String>>();
+  private final Map<String, List<String>> variables = new HashMap<String, List<String>>();;
+  private final Map<String, List<String>> facets = new HashMap<String, List<String>>();
   @JsonField("function_params")
-  private List<String> functionParams = new ArrayList<String>();
+  private final List<String> functionParams = new ArrayList<String>();
   private String function;
   @JsonField("save_as")
   private SaveAs saveAs;

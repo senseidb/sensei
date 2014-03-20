@@ -1,11 +1,10 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.senseidb</groupId>
 		<artifactId>sensei-parent</artifactId>
-		<version>1.6.1-SNAPSHOT</version>
+		<version>2.0.2-SNAPSHOT</version>
 		<relativePath>../sensei-parent/pom.xml</relativePath>
 	</parent>
 
@@ -27,9 +26,6 @@
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
-			<!-- <plugin> <artifactId>maven-resources-plugin</artifactId> <version>2.2</version> 
-				<configuration> <encoding>UTF-8</encoding> </configuration> </plugin> -->
-
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
@@ -71,7 +67,6 @@
 					</execution>
 				</executions>
 			</plugin>
-
 			<plugin>
 				<groupId>pl.project13.maven</groupId>
 				<artifactId>git-commit-id-plugin</artifactId>
@@ -92,41 +87,22 @@
 					<generateGitPropertiesFilename>src/main/resources/git.properties</generateGitPropertiesFilename>
 				</configuration>
 			</plugin>
-
 			<plugin>
 				<groupId>org.antlr</groupId>
-				<artifactId>antlr3-maven-plugin</artifactId>
-				<version>3.4</version>
+				<artifactId>antlr4-maven-plugin</artifactId>
+				<version>4.2</version>
+				<configuration>
+					<listener>true</listener>
+					<visitor>true</visitor>
+				</configuration>
 				<executions>
 					<execution>
-						<id>run antlr</id>
-						<phase>generate-sources</phase>
 						<goals>
-							<goal>antlr</goal>
+							<goal>antlr4</goal>
 						</goals>
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<version>1.7</version>
-				<executions>
-					<execution>
-						<id>add-source</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-								<source>${basedir}/target/generated-sources/antlr3</source>
-							</sources>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
 		</plugins>
 	</build>
 
@@ -176,7 +152,7 @@
 		<dependency>
 			<groupId>com.senseidb.zoie</groupId>
 			<artifactId>zoie-jms</artifactId>
-			<version>3.3.1-SNAPSHOT</version>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
@@ -185,18 +161,6 @@
 			<version>2.5.5</version>
 			<type>jar</type>
 			<scope>compile</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.6.1</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-log4j12</artifactId>
-			<version>1.6.1</version>
 		</dependency>
 
 		<dependency>
@@ -220,7 +184,7 @@
 		<dependency>
 			<groupId>com.browseengine.bobo</groupId>
 			<artifactId>bobo-browse</artifactId>
-			<version>3.2.1-SNAPSHOT</version>
+			<version>4.0.3-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
@@ -244,13 +208,13 @@
 		<dependency>
 			<groupId>com.senseidb.zu</groupId>
 			<artifactId>zu-core</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.0.3-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.senseidb.zu</groupId>
 			<artifactId>zu-finagle</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>0.0.3-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
@@ -288,8 +252,16 @@
 
 		<dependency>
 			<groupId>org.antlr</groupId>
-			<artifactId>antlr</artifactId>
-			<version>3.4</version>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>4.2</version>
+			<type>jar</type>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-annotations</artifactId>
+			<version>4.2</version>
 			<type>jar</type>
 			<scope>compile</scope>
 		</dependency>
@@ -312,23 +284,10 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.github.sgroschupf</groupId>
-			<artifactId>zkclient</artifactId>
-			<version>0.1</version>
-		</dependency>
-		<dependency>
 			<groupId>com.twitter.common</groupId>
 			<artifactId>zookeeper-testing</artifactId>
 			<version>0.0.30</version>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>com.linkedin.kamikaze</groupId>
-			<artifactId>kamikaze</artifactId>
-			<version>3.0.6</version>
-			<scope>compile</scope>
-		</dependency>
-
-
 	</dependencies>
 </project>

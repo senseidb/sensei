@@ -3,7 +3,7 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.springframework.org/schema/beans                                                                                                                                                          
-                                                http://www.springframework.org/schema/beans/spring-beans.xsd">
+                            http://www.springframework.org/schema/beans/spring-beans.xsd">
 	
 	<import resource="zoie.spring" />
 
@@ -12,7 +12,7 @@
 		class="com.senseidb.test.SenseiStarter" 
 		factory-method="createZuCluster"  />
 
-	<bean id="query-parser" class="org.apache.lucene.queryParser.QueryParser">
+	<bean id="query-parser" class="org.apache.lucene.queryparser.classic.QueryParser">
 	   <constructor-arg ref="lucene-version"/>
 	   <constructor-arg value="contents" />
 	   <constructor-arg ref="analyzer" />

@@ -24,17 +24,19 @@ import com.senseidb.search.client.req.query.QueryJsonHandler;
  *
  *
  */
+@SuppressWarnings("unused")
 @CustomJsonHandler(QueryJsonHandler.class)
 public class SpanNear extends Query {
   List<SpanTerm> clauses;
-  private int slop;
+  private final int slop;
   @JsonField("in_order")
-  private boolean inOrder;
+  private final boolean inOrder;
   @JsonField("collect_payloads")
-  private boolean collectPayloads;
+  private final boolean collectPayloads;
   private final double boost;
 
-  public SpanNear(List<SpanTerm> clauses, int slop, boolean inOrder, boolean collectPayloads, double boost) {
+  public SpanNear(List<SpanTerm> clauses, int slop, boolean inOrder, boolean collectPayloads,
+      double boost) {
     super();
     this.clauses = clauses;
     this.slop = slop;

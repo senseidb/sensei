@@ -20,101 +20,98 @@ import com.senseidb.indexing.hadoop.keyvalueformat.IntermediateForm;
 import com.senseidb.indexing.hadoop.keyvalueformat.Shard;
 import com.senseidb.indexing.hadoop.util.MRConfig;
 
+@SuppressWarnings("deprecation")
 public class SenseiReducer extends MapReduceBase implements
-		Reducer<Shard, IntermediateForm, Shard, Text> {
-	
-	private static final Logger logger = Logger.getLogger(SenseiReducer.class);
-	static final Text DONE = new Text("done");
-	
+    Reducer<Shard, IntermediateForm, Shard, Text> {
 
-	private Configuration iconf;
-	private String mapredTempDir;
-	  
-    public void reduce(Shard key, Iterator<IntermediateForm> values,
-                       OutputCollector<Shard, Text> output, 
-                       Reporter reporter) throws IOException {
+  private static final Logger logger = Logger.getLogger(SenseiReducer.class);
+  static final Text DONE = new Text("done");
 
-    	logger.info("Construct a shard writer for " + key);
-        FileSystem fs = FileSystem.get(iconf);
-        //debug:
-        logger.info("filesystem is: "+ fs.getName());
-        String temp = mapredTempDir + Path.SEPARATOR + "shard_" + key.toFlatString()+ "_" + System.currentTimeMillis();
-        logger.info("mapredTempDir is: "+ mapredTempDir);
-        final ShardWriter writer = new ShardWriter(fs, key, temp, iconf);
+  private Configuration iconf;
+  private String mapredTempDir;
 
-        // update the shard
-        while (values.hasNext()) {
-          IntermediateForm form = values.next();
-          writer.process(form);
-          reporter.progress();
-        }
+  @Override
+  public void reduce(Shard key, Iterator<IntermediateForm> values,
+      OutputCollector<Shard, Text> output, Reporter reporter) throws IOException {
 
-        // close the shard
-        final Reporter fReporter = reporter;
-        new Closeable() {
-          volatile boolean closed = false;
+    logger.info("Construct a shard writer for " + key);
+    FileSystem fs = FileSystem.get(iconf);
+    // debug:
+    logger.info("filesystem is: " + fs.getName());
+    String temp = mapredTempDir + Path.SEPARATOR + "shard_" + key.toFlatString() + "_"
+        + System.currentTimeMillis();
+    logger.info("mapredTempDir is: " + mapredTempDir);
+    final ShardWriter writer = new ShardWriter(fs, key, temp, iconf);
 
-          public void close() throws IOException {
-            // spawn a thread to give progress heartbeats
-            Thread prog = new Thread() {
-              public void run() {
-                while (!closed) {
-                  try {
-                    fReporter.setStatus("closing");
-                    Thread.sleep(1000);
-                  } catch (InterruptedException e) {
-                    continue;
-                  } catch (Throwable e) {
-                    return;
-                  }
-                }
+    // update the shard
+    while (values.hasNext()) {
+      IntermediateForm form = values.next();
+      writer.process(form);
+      reporter.progress();
+    }
+
+    // close the shard
+    final Reporter fReporter = reporter;
+    new Closeable() {
+      volatile boolean closed = false;
+
+      @Override
+      public void close() throws IOException {
+        // spawn a thread to give progress heartbeats
+        Thread prog = new Thread() {
+          @Override
+          public void run() {
+            while (!closed) {
+              try {
+                fReporter.setStatus("closing");
+                Thread.sleep(1000);
+              } catch (InterruptedException e) {
+                continue;
+              } catch (Throwable e) {
+                return;
               }
-            };
-
-            try {
-              prog.start();
-
-              if (writer != null) {
-            	writer.optimize();  //added this option to optimize after all the docs have been added;
-                writer.close();
-              }
-            } finally {
-              closed = true;
             }
           }
-        }.close();
-        logger.info("Closed the shard writer for " + key + ", writer = " + writer);
-    	
-    	
-      output.collect(key, DONE);
-    }
-    
-    @Override
-    public void close() throws IOException {
-    	if(mapredTempDir != null){
-    		File file = new File(mapredTempDir);
-    		if(file.exists())
-    			deleteDir(file);
-    	}
-    }
-    
-    static void deleteDir(File file)
-    {
-      if (file == null || !file.exists())
-        return;
-      for (File f : file.listFiles())
-      {
-        if (f.isDirectory())
-          deleteDir(f);
-        else
-          f.delete();
+        };
+
+        try {
+          prog.start();
+
+          if (writer != null) {
+            writer.optimize(); // added this option to optimize after all the docs have been added;
+            writer.close();
+          }
+        } finally {
+          closed = true;
+        }
       }
-      file.delete();
-    }
-    
-    public void configure(JobConf job) {
-        iconf = job;
-        mapredTempDir = iconf.get(MRConfig.TEMP_DIR);
-        mapredTempDir = Shard.normalizePath(mapredTempDir);
-      }
+    }.close();
+    logger.info("Closed the shard writer for " + key + ", writer = " + writer);
+
+    output.collect(key, DONE);
   }
+
+  @Override
+  public void close() throws IOException {
+    if (mapredTempDir != null) {
+      File file = new File(mapredTempDir);
+      if (file.exists()) deleteDir(file);
+    }
+  }
+
+  static void deleteDir(File file) {
+    if (file == null || !file.exists()) return;
+    for (File f : file.listFiles()) {
+      if (f.isDirectory()) deleteDir(f);
+      else f.delete();
+    }
+    file.delete();
+  }
+
+  @Override
+  public void configure(JobConf job) {
+    iconf = job;
+    mapredTempDir = iconf.get(MRConfig.TEMP_DIR);
+    mapredTempDir = Shard.normalizePath(mapredTempDir);
+  }
+}

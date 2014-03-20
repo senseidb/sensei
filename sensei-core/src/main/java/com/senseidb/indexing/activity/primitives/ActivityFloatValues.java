@@ -7,12 +7,14 @@ import java.nio.MappedByteBuffer;
 import com.senseidb.indexing.activity.AtomicFieldUpdate;
 
 public class ActivityFloatValues extends ActivityPrimitiveValues {
-public float[] fieldValues;
-  
+  public float[] fieldValues;
+
   public void init(int capacity) {
     fieldValues = new float[capacity];
   }
-  /* (non-Javadoc)
+
+  /*
+   * (non-Javadoc)
    * @see com.senseidb.indexing.activity.ActivityValues#update(int, java.lang.Object)
    */
   @Override
@@ -26,8 +28,9 @@ public float[] fieldValues;
   }
 
   protected ActivityFloatValues() {
-    
+
   }
+
   public ActivityFloatValues(int capacity) {
     init(capacity);
   }
@@ -42,7 +45,8 @@ public float[] fieldValues;
       return;
     }
     if (fieldValues.length - currentArraySize < 2) {
-      int newSize = fieldValues.length < 10000000 ? fieldValues.length * 2 : (int) (fieldValues.length * 1.5);
+      int newSize = fieldValues.length < 10000000 ? fieldValues.length * 2
+          : (int) (fieldValues.length * 1.5);
       float[] newFieldValues = new float[newSize];
       System.arraycopy(fieldValues, 0, newFieldValues, 0, fieldValues.length);
       this.fieldValues = newFieldValues;
@@ -59,7 +63,7 @@ public float[] fieldValues;
     if (value == null) {
       return;
     }
-     if (value instanceof Number) {
+    if (value instanceof Number) {
       fieldValues[index] = ((Number) value).floatValue();
     } else if (value instanceof String) {
       String valStr = (String) value;
@@ -74,8 +78,7 @@ public float[] fieldValues;
         fieldValues[index] = Float.parseFloat(valStr);
       }
     } else {
-      throw new UnsupportedOperationException(
-          "Only longs, ints and String are supported");
+      throw new UnsupportedOperationException("Only longs, ints and String are supported");
     }
   }
 
@@ -86,40 +89,45 @@ public float[] fieldValues;
   public void setFieldValues(float[] fieldValues) {
     this.fieldValues = fieldValues;
   }
-  @Override 
-  public void initFieldValues(int count, MappedByteBuffer  buffer) {
-     for (int i = 0; i < count; i++) {
-       float value;
-         value = buffer.getFloat(i * 4);
-       fieldValues[i] = value;
-     }
-   }
-   @Override
-   public void initFieldValues(int count, RandomAccessFile storedFile) {
-     for (int i = 0; i < count; i++) {
-       float value;       
-         try {
-          storedFile.seek(i * 4);
-          value = storedFile.readFloat();       
-          fieldValues[i] = value;
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-     }
-   }
-   @Override
-   public void delete(int index) {
-     fieldValues[index] = Float.MIN_VALUE;
-     updateBatch.addFieldUpdate(AtomicFieldUpdate.valueOf(index, fieldValues[index]));   
-   }
+
+  @Override
+  public void initFieldValues(int count, MappedByteBuffer buffer) {
+    for (int i = 0; i < count; i++) {
+      float value;
+      value = buffer.getFloat(i * 4);
+      fieldValues[i] = value;
+    }
+  }
+
+  @Override
+  public void initFieldValues(int count, RandomAccessFile storedFile) {
+    for (int i = 0; i < count; i++) {
+      float value;
+      try {
+        storedFile.seek(i * 4);
+        value = storedFile.readFloat();
+        fieldValues[i] = value;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  @Override
+  public void delete(int index) {
+    fieldValues[index] = Float.MIN_VALUE;
+    updateBatch.addFieldUpdate(AtomicFieldUpdate.valueOf(index, fieldValues[index]));
+  }
+
   @Override
   public int getFieldSizeInBytes() {
-    
+
     return 4;
   }
+
   @Override
   public Number getValue(int index) {
-    
+
     return getFloatValue(index);
   }
 

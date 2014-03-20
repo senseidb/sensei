@@ -16,49 +16,43 @@ public class ActivityIntValuesSynchronizedDecorator extends ActivityIntValues {
   public void init() {
     decorated.init();
   }
-  
+
   @Override
   public boolean update(int index, Object value) {
-    synchronized(SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
-      //System.out.println("!!!Update" + value);
+    synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
+      // System.out.println("!!!Update" + value);
       return decorated.update(index, value);
     }
   }
 
- 
   public void delete(int index) {
-    synchronized(SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
+    synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
       decorated.delete(index);
     }
   }
+
   protected ActivityIntValuesSynchronizedDecorator(ActivityIntValues decorated) {
     this.decorated = decorated;
   }
-  
 
- 
   public Runnable prepareFlush() {
     return this.decorated.prepareFlush();
   }
 
   public int getIntValue(int index) {
-    synchronized(SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
+    synchronized (SynchronizedActivityRangeFacetHandler.GLOBAL_ACTIVITY_TEST_LOCK) {
       return this.decorated.getIntValue(index);
     }
   }
 
- 
-
-
   public int[] getFieldValues() {
-   return decorated.getFieldValues();
+    return decorated.getFieldValues();
   }
 
   public void setFieldValues(int[] fieldValues) {
     decorated.setFieldValues(fieldValues);
   }
 
- 
   @Override
   public void close() {
     decorated.close();
@@ -68,10 +62,13 @@ public class ActivityIntValuesSynchronizedDecorator extends ActivityIntValues {
   public String getFieldName() {
     return decorated.getFieldName();
   }
-  public static void decorate( TimeAggregatedActivityValues timeAggregatedActivityValues) {
-    timeAggregatedActivityValues.defaultIntValues = new ActivityIntValuesSynchronizedDecorator(timeAggregatedActivityValues.defaultIntValues);
-    for (IntValueHolder intValueHolder :  timeAggregatedActivityValues.intActivityValues) {
-      intValueHolder.activityIntValues = new ActivityIntValuesSynchronizedDecorator(intValueHolder.activityIntValues);
+
+  public static void decorate(TimeAggregatedActivityValues timeAggregatedActivityValues) {
+    timeAggregatedActivityValues.defaultIntValues = new ActivityIntValuesSynchronizedDecorator(
+        timeAggregatedActivityValues.defaultIntValues);
+    for (IntValueHolder intValueHolder : timeAggregatedActivityValues.intActivityValues) {
+      intValueHolder.activityIntValues = new ActivityIntValuesSynchronizedDecorator(
+          intValueHolder.activityIntValues);
     }
   }
 }

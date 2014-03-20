@@ -22,19 +22,22 @@ public class JsonSerializer {
 
   public static Object serialize(Object object) {
     try {
-      return serialize(object,true);
+      return serialize(object, true);
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
   }
 
-  public static Object serialize(Object object, boolean handleCustomJsonHandler) throws JSONException {
-    return serialize(Collections.newSetFromMap(new IdentityHashMap()), object, handleCustomJsonHandler);
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  public static Object serialize(Object object, boolean handleCustomJsonHandler)
+      throws JSONException {
+    return serialize(Collections.newSetFromMap(new IdentityHashMap()), object,
+      handleCustomJsonHandler);
   }
 
-  private static Object serialize(Set<Object> parents,
-                                  Object object,
-                                  boolean handleCustomJsonHandler) throws JSONException {
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  private static Object serialize(Set<Object> parents, Object object,
+      boolean handleCustomJsonHandler) throws JSONException {
     if (object == null) {
       return null;
     }
@@ -44,7 +47,8 @@ public class JsonSerializer {
     }
     parents.add(object);
     try {
-      if (object instanceof String || object instanceof Number || object instanceof Boolean || object.getClass().isPrimitive() || object instanceof JSONObject) {
+      if (object instanceof String || object instanceof Number || object instanceof Boolean
+          || object.getClass().isPrimitive() || object instanceof JSONObject) {
         return object;
       }
       CustomJsonHandler customJsonHandler = getCustomJsonHandlerByType(object.getClass());
@@ -58,7 +62,7 @@ public class JsonSerializer {
       if (object instanceof Collection) {
         Collection collection = (Collection) object;
         List<Object> arr = new ArrayList<Object>(collection.size());
-        for(Object obj : collection) {
+        for (Object obj : collection) {
           arr.add(serialize(parents, obj, true));
         }
         return new JSONArray(arr);
@@ -66,11 +70,11 @@ public class JsonSerializer {
       if (object instanceof Map) {
         Map map = (Map) object;
         JSONObject ret = new JSONObject();
-        for(Map.Entry entry : (Set<Map.Entry>) map.entrySet()) {
+        for (Map.Entry entry : (Set<Map.Entry>) map.entrySet()) {
           Object key = serialize(parents, entry.getKey(), true);
           if (key == null) key = NULL;
           else key = key.toString();
-          ret.put((String)key, serialize(parents, entry.getValue(), true));
+          ret.put((String) key, serialize(parents, entry.getValue(), true));
         }
         return ret;
       }
@@ -90,11 +94,12 @@ public class JsonSerializer {
             ret.put(name, serialize(parents, fieldValue, true));
           } else {
             JsonHandler jsonHandler = instantiate(customJsonHandlerAnnotation.value());
-            Object fieldJson =  jsonHandler.serialize(fieldValue);
+            Object fieldJson = jsonHandler.serialize(fieldValue);
             if (customJsonHandlerAnnotation.flatten() && fieldJson != null) {
-              String[] names = JSONObject.getNames((JSONObject)fieldJson);
+              String[] names = JSONObject.getNames((JSONObject) fieldJson);
               if (names == null || names.length != 1) {
-                throw new IllegalStateException("It's impossible to flatten the JsonExpression " + fieldJson);
+                throw new IllegalStateException("It's impossible to flatten the JsonExpression "
+                    + fieldJson);
               }
               Object internalJson = ((JSONObject) fieldJson).opt(names[0]);
               if (customJsonHandlerAnnotation.overrideColumnName()) {
@@ -109,23 +114,28 @@ public class JsonSerializer {
         }
       }
       return ret;
-    }
-    finally
-    {
+    } finally {
       parents.remove(object);
     }
   }
 
-  private static Map<Class<?>, CustomJsonHandler> jsonHandlersByType = Collections.synchronizedMap(new WeakHashMap<Class<?>, CustomJsonHandler>());
-  private static Map<Field, CustomJsonHandler> jsonHandlersByField = Collections.synchronizedMap(new WeakHashMap<Field, CustomJsonHandler>());
-  private static Map<Class<? extends JsonHandler>, JsonHandler> jsonHandlers = Collections.synchronizedMap(new WeakHashMap<Class<? extends JsonHandler>, JsonHandler>());
+  private static Map<Class<?>, CustomJsonHandler> jsonHandlersByType = Collections
+      .synchronizedMap(new WeakHashMap<Class<?>, CustomJsonHandler>());
+  private static Map<Field, CustomJsonHandler> jsonHandlersByField = Collections
+      .synchronizedMap(new WeakHashMap<Field, CustomJsonHandler>());
+  @SuppressWarnings("rawtypes")
+  private static Map<Class<? extends JsonHandler>, JsonHandler> jsonHandlers = Collections
+      .synchronizedMap(new WeakHashMap<Class<? extends JsonHandler>, JsonHandler>());
+
   private static CustomJsonHandler getCustomJsonHandlerByType(Class<?> cls) {
     if (!jsonHandlersByType.containsKey(cls)) {
-      CustomJsonHandler customJsonHandler = (CustomJsonHandler) ReflectionUtil.getAnnotation(cls, CustomJsonHandler.class);
+      CustomJsonHandler customJsonHandler = (CustomJsonHandler) ReflectionUtil.getAnnotation(cls,
+        CustomJsonHandler.class);
       jsonHandlersByType.put(cls, customJsonHandler);
     }
     return jsonHandlersByType.get(cls);
   }
+
   private static CustomJsonHandler getCustomJsonHandlerByField(Field field) {
     if (!jsonHandlersByField.containsKey(field)) {
       CustomJsonHandler customJsonHandler = field.getAnnotation(CustomJsonHandler.class);
@@ -133,6 +143,8 @@ public class JsonSerializer {
     }
     return jsonHandlersByField.get(field);
   }
+
+  @SuppressWarnings("rawtypes")
   private static JsonHandler instantiate(Class<? extends JsonHandler> cls) {
     if (!jsonHandlers.containsKey(cls)) {
 

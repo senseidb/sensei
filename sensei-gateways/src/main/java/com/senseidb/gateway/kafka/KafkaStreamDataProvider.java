@@ -31,16 +31,16 @@ import proj.zoie.impl.indexing.ZoieConfig;
 
 import com.senseidb.indexing.DataSourceFilter;
 
-public class KafkaStreamDataProvider extends StreamDataProvider<JSONObject>{
+public class KafkaStreamDataProvider extends StreamDataProvider<JSONObject> {
   private static Logger logger = Logger.getLogger(KafkaStreamDataProvider.class);
 
-
-private final Set<String> _topics;
-  private  String _consumerGroupId;
+  private final Set<String> _topics;
+  private String _consumerGroupId;
   private Properties _kafkaConfig;
   protected ConsumerConnector _consumerConnector;
   private Iterator<Message> _consumerIterator;
-  private ThreadLocal<DecimalFormat> formatter = new ThreadLocal<DecimalFormat>() {
+  private final ThreadLocal<DecimalFormat> formatter = new ThreadLocal<DecimalFormat>() {
+    @Override
     protected DecimalFormat initialValue() {
       return new DecimalFormat("00000000000000000000");
     }
@@ -48,39 +48,38 @@ private final Set<String> _topics;
 
   private ExecutorService _executorService;
 
+  private String _zookeeperUrl;
+  private volatile boolean _started = false;
+  private DataSourceFilter<DataPacket> _dataConverter;
 
-  
-    private  String _zookeeperUrl;
-    private  int _kafkaSoTimeout;
-    private volatile boolean _started = false;
-    private  DataSourceFilter<DataPacket> _dataConverter;
-  
-  public KafkaStreamDataProvider(Comparator<String> versionComparator,String zookeeperUrl,int soTimeout,int batchSize,
-                                 String consumerGroupId,String topic,long startingOffset,DataSourceFilter<DataPacket> dataConverter){
-    this(versionComparator, zookeeperUrl, soTimeout, batchSize, consumerGroupId, topic, startingOffset, dataConverter, new Properties());
+  public KafkaStreamDataProvider(Comparator<String> versionComparator, String zookeeperUrl,
+      int soTimeout, int batchSize, String consumerGroupId, String topic, long startingOffset,
+      DataSourceFilter<DataPacket> dataConverter) {
+    this(versionComparator, zookeeperUrl, soTimeout, batchSize, consumerGroupId, topic,
+        startingOffset, dataConverter, new Properties());
 
   }
+
   public KafkaStreamDataProvider() {
     super(ZoieConfig.DEFAULT_VERSION_COMPARATOR);
     _topics = new HashSet<String>();
 
   }
-  public KafkaStreamDataProvider(Comparator<String> versionComparator,String zookeeperUrl,int soTimeout,int batchSize,
-                                 String consumerGroupId,String topic,long startingOffset,DataSourceFilter<DataPacket> dataConverter,Properties kafkaConfig){
+
+  public KafkaStreamDataProvider(Comparator<String> versionComparator, String zookeeperUrl,
+      int soTimeout, int batchSize, String consumerGroupId, String topic, long startingOffset,
+      DataSourceFilter<DataPacket> dataConverter, Properties kafkaConfig) {
     super(versionComparator);
     _consumerGroupId = consumerGroupId;
     _topics = new HashSet<String>();
-    for (String raw : topic.split("[, ;]+"))
-    {
+    for (String raw : topic.split("[, ;]+")) {
       String t = raw.trim();
-      if (t.length() != 0)
-      {
+      if (t.length() != 0) {
         _topics.add(t);
       }
     }
     super.setBatchSize(batchSize);
     _zookeeperUrl = zookeeperUrl;
-    _kafkaSoTimeout = soTimeout;
     _consumerConnector = null;
     _consumerIterator = null;
 
@@ -90,61 +89,62 @@ private final Set<String> _topics;
     }
 
     _dataConverter = dataConverter;
-    if (_dataConverter == null){
+    if (_dataConverter == null) {
       throw new IllegalArgumentException("kafka data converter is null");
     }
   }
+
   public void commit() {
     _consumerConnector.commitOffsets();
   }
+
   @Override
-  public void setStartingOffset(String version){
+  public void setStartingOffset(String version) {
   }
-  
+
   @Override
   public DataEvent<JSONObject> next() {
     if (!_started) return null;
 
-    try
-    {
-      if (!_consumerIterator.hasNext())
-        return null;
-    }
-    catch (Exception e)
-    {
+    try {
+      if (!_consumerIterator.hasNext()) return null;
+    } catch (Exception e) {
       // Most likely timeout exception - ok to ignore
       return null;
     }
 
     Message msg = _consumerIterator.next();
-    if (logger.isDebugEnabled()){
-      logger.debug("got new message: "+msg);
+    if (logger.isDebugEnabled()) {
+      logger.debug("got new message: " + msg);
     }
     long version = getNextVersion();
-    
+
     JSONObject data;
     try {
       int size = msg.payloadSize();
       ByteBuffer byteBuffer = msg.payload();
       byte[] bytes = new byte[size];
-      byteBuffer.get(bytes,0,size);
-      data = _dataConverter.filter(new DataPacket(bytes,0,size));
-      
-      if (logger.isDebugEnabled()){
-        logger.debug("message converted: "+data);
+      byteBuffer.get(bytes, 0, size);
+      data = _dataConverter.filter(new DataPacket(bytes, 0, size));
+
+      if (logger.isDebugEnabled()) {
+        logger.debug("message converted: " + data);
       }
       return new DataEvent<JSONObject>(data, getStringVersionRepresentation(version));
     } catch (Exception e) {
-      logger.error(e.getMessage(),e);
+      logger.error(e.getMessage(), e);
       return null;
     }
   }
+
   public long getNextVersion() {
     return System.currentTimeMillis();
   }
+
   public String getStringVersionRepresentation(long version) {
     return formatter.get().format(version);
   }
+
   @Override
   public void reset() {
   }
@@ -153,7 +153,6 @@ private final Set<String> _topics;
   public void start() {
     Properties props = new Properties();
     props.put("zk.connect", _zookeeperUrl);
-    //props.put("consumer.timeout.ms", _kafkaSoTimeout);
     props.put("groupid", _consumerGroupId);
 
     for (String key : _kafkaConfig.stringPropertyNames()) {
@@ -166,102 +165,74 @@ private final Set<String> _topics;
     _consumerConnector = Consumer.createJavaConsumerConnector(consumerConfig);
 
     Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
-    for (String topic : _topics)
-    {
+    for (String topic : _topics) {
       topicCountMap.put(topic, 1);
     }
-    Map<String, List<KafkaMessageStream<Message>>> topicMessageStreams =
-        _consumerConnector.createMessageStreams(topicCountMap);
-
+    Map<String, List<KafkaMessageStream<Message>>> topicMessageStreams = _consumerConnector
+        .createMessageStreams(topicCountMap);
 
     final ArrayBlockingQueue<Message> queue = new ArrayBlockingQueue<Message>(8, true);
 
     int streamCount = 0;
-    for (List<KafkaMessageStream<Message>> streams : topicMessageStreams.values())
-    {
-      for (KafkaMessageStream<Message> stream : streams)
-      {
-        ++streamCount;
-      }
+    for (List<KafkaMessageStream<Message>> streams : topicMessageStreams.values()) {
+      streamCount += streams.size();
     }
     _executorService = Executors.newFixedThreadPool(streamCount);
 
-    for (List<KafkaMessageStream<Message>> streams : topicMessageStreams.values())
-    {
-      for (KafkaMessageStream<Message> stream : streams)
-      {
+    for (List<KafkaMessageStream<Message>> streams : topicMessageStreams.values()) {
+      for (KafkaMessageStream<Message> stream : streams) {
         final KafkaMessageStream<Message> messageStream = stream;
-        _executorService.execute(new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              logger.info("Kafka consumer thread started: " + Thread.currentThread().getId());
-              try
-              {
-                for (Message message : messageStream)
-                {
-                  queue.put(message);
-                }
+        _executorService.execute(new Runnable() {
+          @Override
+          public void run() {
+            logger.info("Kafka consumer thread started: " + Thread.currentThread().getId());
+            try {
+              for (Message message : messageStream) {
+                queue.put(message);
               }
-              catch(Exception e)
-              {
-                // normally it should the stop interupt exception.
-                logger.error(e.getMessage(), e);
-              }
-              logger.info("Kafka consumer thread ended: " + Thread.currentThread().getId());
+            } catch (Exception e) {
+              // normally it should the stop interupt exception.
+              logger.error(e.getMessage(), e);
             }
+            logger.info("Kafka consumer thread ended: " + Thread.currentThread().getId());
           }
-        );
+        });
       }
     }
 
-    _consumerIterator = new Iterator<Message>()
-    {
+    _consumerIterator = new Iterator<Message>() {
       private Message message = null;
 
       @Override
-      public boolean hasNext()
-      {
-        if (message != null)  return true;
+      public boolean hasNext() {
+        if (message != null) return true;
 
-        try
-        {
+        try {
           message = queue.poll(1, TimeUnit.SECONDS);
-        }
-        catch(InterruptedException ie)
-        {
+        } catch (InterruptedException ie) {
           return false;
         }
 
-        if (message != null)
-        {
+        if (message != null) {
           return true;
-        }
-        else
-        {
+        } else {
           return false;
         }
       }
 
       @Override
-      public Message next()
-      {
-        if (hasNext())
-        {
+      public Message next() {
+        if (hasNext()) {
           Message res = message;
           message = null;
           return res;
-        }
-        else
-        {
+        } else {
           throw new NoSuchElementException();
         }
       }
 
       @Override
-      public void remove()
-      {
+      public void remove() {
         throw new UnsupportedOperationException("not supported");
       }
     };
@@ -274,26 +245,18 @@ private final Set<String> _topics;
   public void stop() {
     _started = false;
 
-    try
-    {
-      if (_executorService != null)
-      {
+    try {
+      if (_executorService != null) {
         _executorService.shutdown();
       }
-    }
-    finally
-    {
-      try
-      {
-        if (_consumerConnector != null)
-        {
+    } finally {
+      try {
+        if (_consumerConnector != null) {
           _consumerConnector.shutdown();
         }
-      }
-      finally
-      {
+      } finally {
         super.stop();
       }
     }
-  }  
+  }
 }

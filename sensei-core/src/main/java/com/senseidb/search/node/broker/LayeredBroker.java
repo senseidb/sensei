@@ -18,16 +18,18 @@ import com.senseidb.svc.api.SenseiException;
 public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, SenseiResult> {
   private static final String CLUSTERS = "clusters";
   private List<String> clusters = new ArrayList<String>();
-  private Map<String, CompoundBrokerConfig> clusterBrokerConfig = new HashMap<String, CompoundBrokerConfig>() ;
-  private Map<String, SenseiBroker> brokers = new HashMap<String, SenseiBroker>() ;
+  private Map<String, CompoundBrokerConfig> clusterBrokerConfig = new HashMap<String, CompoundBrokerConfig>();
+  private Map<String, SenseiBroker> brokers = new HashMap<String, SenseiBroker>();
   private LayeredClusterPruner federatedPruner;
+
   @Override
   public void init(Map<String, String> config, SenseiPluginRegistry pluginRegistry) {
     String clustersConfig = config.get(CLUSTERS);
     if (clustersConfig == null) {
       throw new IllegalArgumentException("Clusters param should be present");
     }
-    federatedPruner = pluginRegistry.getBeanByFullPrefix(SenseiConfParams.SENSEI_FEDERATED_BROKER_PRUNER, LayeredClusterPruner.class);
+    federatedPruner = pluginRegistry.getBeanByFullPrefix(
+      SenseiConfParams.SENSEI_FEDERATED_BROKER_PRUNER, LayeredClusterPruner.class);
     if (federatedPruner == null) {
       federatedPruner = new AllClustersPruner();
     }
@@ -35,11 +37,12 @@ public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, Sensei
       String trimmed = cluster.trim();
       if (trimmed.length() > 0) {
         clusters.add(trimmed);
-        clusterBrokerConfig.put(trimmed, new CompoundBrokerConfig(pluginRegistry.getConfiguration(),  config, trimmed));
+        clusterBrokerConfig.put(trimmed, new CompoundBrokerConfig(
+            pluginRegistry.getConfiguration(), config, trimmed));
       }
-    }    
+    }
   }
-  
+
   @Override
   public void start() {
     for (String cluster : clusters) {
@@ -47,7 +50,7 @@ public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, Sensei
       brokerConfig.init(null);
       brokers.put(cluster, brokerConfig.buildSenseiBroker());
     }
-    
+
   }
 
   @Override
@@ -57,7 +60,7 @@ public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, Sensei
       brokerConfig.shutdown();
     }
   }
-  
+
   public void warmUp() {
     for (SenseiBroker broker : brokers.values()) {
       try {
@@ -67,6 +70,7 @@ public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, Sensei
       }
     }
   }
+
   public SenseiResult browse(final SenseiRequest req) throws SenseiException {
     List<String> prunedClusters = federatedPruner.pruneClusters(req, clusters);
     int count = req.getCount();
@@ -74,7 +78,7 @@ public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, Sensei
     if (count == 0) {
       return new SenseiResult();
     }
-    
+
     List<SenseiResult> results = new ArrayList<SenseiResult>();
     if (!federatedPruner.clusterPrioritiesEqual(req)) {
       for (String cluster : prunedClusters) {
@@ -97,15 +101,14 @@ public class LayeredBroker implements SenseiPlugin, Broker<SenseiRequest, Sensei
         }
       }
     } else {
-      for (String cluster : prunedClusters) {       
-        SenseiRequest request = req.clone();       
-        SenseiResult currentResult = brokers.get(cluster).browse(request);      
+      for (String cluster : prunedClusters) {
+        SenseiRequest request = req.clone();
+        SenseiResult currentResult = brokers.get(cluster).browse(request);
         results.add(currentResult);
       }
     }
-    SenseiResult res = ResultMerger.merge(req, results, false); 
+    SenseiResult res = ResultMerger.merge(req, results, false);
     return res;
   }
-  
-  
+
 }

@@ -721,7 +721,7 @@ sensei.index.manager.default.file.path = data/cars.json
 # plugins: from plugins.xml
 
 # analyzer, default: StandardAnalyzer
-# sensei.index.analyzer.class = org.apache.lucene.analysis.WhitespaceAnalyzer
+# sensei.index.analyzer.class = org.apache.lucene.analysis.core.WhitespaceAnalyzer
 
 # similarity, default: DefaultSimilarity
 # sensei.index.similarity.class = com.sensei.plugin.example.MyCustomSimilarity
@@ -1960,7 +1960,7 @@ sensei.custom.facets.list= virtual_groupids, my.custom_facets.tags, groupid  </p
 
             <para>This specifies the class name of similarity plug-in for
             Lucene scoring. If not specified,
-            <literal>org.apache.lucene.search.DefaultSimilarity</literal> is
+            <literal>org.apache.lucene.search.similarities.DefaultSimilarity</literal> is
             used.</para>
           </listitem>
         </varlistentry>

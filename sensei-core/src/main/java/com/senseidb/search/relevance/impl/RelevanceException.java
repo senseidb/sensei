@@ -4,53 +4,45 @@ import org.json.JSONException;
 
 import com.senseidb.search.req.ErrorType;
 
-public class RelevanceException extends JSONException
-{
+public class RelevanceException extends JSONException {
   /**
    * 
    */
   private static final long serialVersionUID = 1L;
-  private Throwable         myCause;
+  private Throwable myCause;
 
   /**
    * Gets the cause of this throwable. It is for JDK 1.3 compatibility.
    */
-  public Throwable getCause()
-  {
+  public Throwable getCause() {
     return (myCause == this ? null : myCause);
   }
 
   /**
    * Initializes the cause of this throwable. It is for JDK 1.3 compatibility.
    */
-  public synchronized Throwable initCause(Throwable cause)
-  {
+  public synchronized Throwable initCause(Throwable cause) {
     myCause = cause;
     return this;
   }
 
   private String message;
-  private int    errorcode = Integer.MIN_VALUE;
+  private int errorcode = Integer.MIN_VALUE;
 
   /**
    * Gets a long message if it is available.
    */
-  public String getMessage()
-  {
-    if (message != null)
-      return message;
-    else
-      return this.toString();
+  public String getMessage() {
+    if (message != null) return message;
+    else return this.toString();
   }
-  
+
   /**
    * Gets the errorcode if it is available.
    */
-  public int getErrorCode()
-  {
+  public int getErrorCode() {
     return this.errorcode;
   }
-  
 
   /**
    * Constructs a RelevanceException with a message.
@@ -58,8 +50,7 @@ public class RelevanceException extends JSONException
    * @param msg
    *          the message.
    */
-  public RelevanceException(String msg)
-  {
+  public RelevanceException(String msg) {
     super(msg);
     errorcode = ErrorType.UnknownError.getDefaultErrorCode();
     message = msg;
@@ -69,19 +60,17 @@ public class RelevanceException extends JSONException
   /**
    * Constructs a RelevanceException with an error code and message.
    */
-  public RelevanceException(ErrorType errorType, String message)
-  {
+  public RelevanceException(ErrorType errorType, String message) {
     super(message);
     this.message = message;
     this.errorcode = errorType.getDefaultErrorCode();
     initCause(null);
   }
-  
+
   /**
    * Constructs a RelevanceException with an error code and message and exception.
    */
-  public RelevanceException(ErrorType errorType, String message, Exception e)
-  {
+  public RelevanceException(ErrorType errorType, String message, Exception e) {
     super(message);
     this.message = message;
     this.errorcode = errorType.getDefaultErrorCode();
@@ -95,8 +84,7 @@ public class RelevanceException extends JSONException
    * @param e
    *          the cause.
    */
-  public RelevanceException(Throwable e)
-  {
+  public RelevanceException(Throwable e) {
     super("by " + e.toString());
     message = null;
     errorcode = ErrorType.UnknownError.getDefaultErrorCode();
@@ -112,8 +100,7 @@ public class RelevanceException extends JSONException
    * @param e
    *          the cause.
    */
-  public RelevanceException(String msg, Throwable e)
-  {
+  public RelevanceException(String msg, Throwable e) {
     this(msg);
     errorcode = ErrorType.UnknownError.getDefaultErrorCode();
     initCause(e);
@@ -122,8 +109,7 @@ public class RelevanceException extends JSONException
   /**
    * Constructs a RelevanceException with an <code>Exception</code>.
    */
-  public RelevanceException(Exception e)
-  {
+  public RelevanceException(Exception e) {
     this("exception message: " + e.getMessage(), e);
   }
 

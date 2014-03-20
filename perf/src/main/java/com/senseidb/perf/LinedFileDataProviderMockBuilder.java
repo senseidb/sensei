@@ -16,7 +16,7 @@ import com.senseidb.indexing.ShardingStrategy;
 
 public class LinedFileDataProviderMockBuilder  extends SenseiGateway<String>{
 
-  private Comparator<String> _versionComparator = ZoieConfig.DEFAULT_VERSION_COMPARATOR;
+  private final Comparator<String> _versionComparator = ZoieConfig.DEFAULT_VERSION_COMPARATOR;
 
 
   @Override
@@ -30,9 +30,6 @@ public class LinedFileDataProviderMockBuilder  extends SenseiGateway<String>{
     if (path == null) {
       path = "data/cars.json";
     }
-    long offset = oldSinceKey == null ? 0L : Long.parseLong(oldSinceKey);
-    
-
     PerfFileDataProvider provider = new PerfFileDataProvider(_versionComparator, new File(path), 0L, new LinkedBlockingQueue<JSONObject>(30000));
     if (dataFilter!=null){
       provider.setFilter(dataFilter);

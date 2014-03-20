@@ -17,12 +17,12 @@ import com.senseidb.search.client.json.CustomJsonHandler;
  *
  */
 @CustomJsonHandler(QueryJsonHandler.class)
-public class MatchAllQuery  extends Query {
-    double boost;
+public class MatchAllQuery extends Query {
+  double boost;
 
-    public MatchAllQuery(double boost) {
-        super();
-        this.boost = boost;
-    }
-    
+  public MatchAllQuery(double boost) {
+    super();
+    this.boost = boost;
+  }
+
 }

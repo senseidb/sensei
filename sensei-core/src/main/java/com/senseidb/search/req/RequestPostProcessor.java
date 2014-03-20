@@ -9,5 +9,5 @@ import org.json.JSONObject;
  *
  */
 public interface RequestPostProcessor {
-      List<SenseiError> process(JSONObject senseiRequest);
+  List<SenseiError> process(JSONObject senseiRequest);
 }

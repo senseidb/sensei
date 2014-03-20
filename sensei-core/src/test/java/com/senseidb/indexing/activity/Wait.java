@@ -17,7 +17,7 @@ public class Wait {
     }
     Assert.assertTrue(failureMessage, condition.evaluate());
   }
-  
+
   public static interface Condition {
     public boolean evaluate();
   }

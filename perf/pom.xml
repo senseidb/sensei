@@ -1,11 +1,13 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	
-	
-	<groupId>com.senseidb</groupId>
+	<parent>
+		<groupId>com.senseidb</groupId>
+		<artifactId>sensei-parent</artifactId>
+		<version>2.0.1-SNAPSHOT</version>
+		<relativePath>../sensei-parent/pom.xml</relativePath>
+	</parent>
+
 	<artifactId>sensei-perf</artifactId>
-	<version>1.6.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>sensei-perf</name>
 	<description>sensei perf</description>
@@ -24,7 +26,7 @@
 				</configuration>
 			</plugin>
 		</plugins>
-		
+
 	</build>
 
 	<properties>
@@ -32,30 +34,24 @@
 	</properties>
 
 	<dependencies>
-
 		<dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-codecs</artifactId>
-            <version>4.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-analyzers-common</artifactId>
-            <version>4.0.0</version>
-        </dependency>
-<dependency>
-    <groupId>org.apache.lucene</groupId>
-    <artifactId>lucene-queryparser</artifactId>
-    <version>4.0.0</version>
-</dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sensei-core</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sensei-java-client</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 	</dependencies>
-            
-    <repositories>
-      <repository>
-        <id>codahale</id>
-        <name>Coda Hale's Repo</name>
-        <url>http://repo.codahale.com/</url>
-      </repository>
-    </repositories>
+
+	<repositories>
+		<repository>
+			<id>codahale</id>
+			<name>Coda Hale's Repo</name>
+			<url>http://repo.codahale.com/</url>
+		</repository>
+	</repositories>
 
 </project>

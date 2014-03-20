@@ -23,7 +23,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.log4j.Logger;
 
-import proj.zoie.api.ZoieIndexReader;
+import proj.zoie.api.ZoieSegmentReader;
 
 import com.senseidb.conf.SenseiSchema;
 import com.senseidb.indexing.activity.CompositeActivityManager.TimeAggregateInfo;
@@ -38,13 +38,13 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.MetricName;
 
 /**
- * 
+ *
  * Maintains the set of activityValues. The main responsibility of this class is
  * to keep track of uid to array index mapping, persisted and in memory
  * versions. The the document gets into the system, the class will find/create
  * uid to index mapping, and change the activity values for the activity fields
  * found in the document
- * 
+ *
  */
 public class CompositeActivityValues {
 
@@ -76,12 +76,18 @@ public class CompositeActivityValues {
   protected static Counter totalUpdatesCounter;
   protected static Counter versionRejectionCounter;
   static {
-    reclaimedDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class, "reclaimedActivityDocs"));
-    currentDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class, "currentActivityDocs"));
-    deletedDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class, "deletedActivityDocs"));
-    insertedDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class, "insertedActivityDocs"));
-    totalUpdatesCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class, "totalUpdatesCounter"));
-    versionRejectionCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class, "activityVersionRejectionCounter"));
+    reclaimedDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class,
+        "reclaimedActivityDocs"));
+    currentDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class,
+        "currentActivityDocs"));
+    deletedDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class,
+        "deletedActivityDocs"));
+    insertedDocumentsCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class,
+        "insertedActivityDocs"));
+    totalUpdatesCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class,
+        "totalUpdatesCounter"));
+    versionRejectionCounter = Metrics.newCounter(new MetricName(CompositeActivityValues.class,
+        "activityVersionRejectionCounter"));
   }
 
   CompositeActivityValues() {
@@ -152,8 +158,9 @@ public class CompositeActivityValues {
     ActivityValues activityValues = valuesMap.get(fieldName);
     if (activityValues == null) {
       if (fieldName.contains(":")) {
-        return ((TimeAggregatedActivityValues) valuesMap.get(fieldName.substring(0, fieldName.indexOf(":")))).getValuesMap().get(
-            fieldName.substring(fieldName.indexOf(":") + 1));
+        return ((TimeAggregatedActivityValues) valuesMap.get(fieldName.substring(0,
+          fieldName.indexOf(":")))).getValuesMap().get(
+          fieldName.substring(fieldName.indexOf(":") + 1));
       }
       return null;
     } else if (activityValues instanceof ActivityIntValues) {
@@ -161,8 +168,8 @@ public class CompositeActivityValues {
     } else if (activityValues instanceof ActivityFloatValues) {
       return (ActivityFloatValues) activityValues;
     } else if (activityValues instanceof ActivityLongValues) {
-        return (ActivityLongValues) activityValues;
-      } else {
+      return (ActivityLongValues) activityValues;
+    } else {
       return ((TimeAggregatedActivityValues) activityValues).getDefaultIntValues();
     }
   }
@@ -182,7 +189,7 @@ public class CompositeActivityValues {
 
   /**
    * Deletes documents from the activity engine
-   * 
+   *
    * @param uids
    */
   public void delete(long... uids) {
@@ -206,7 +213,8 @@ public class CompositeActivityValues {
         for (ActivityValues activityIntValues : valuesMap.values()) {
           activityIntValues.delete(index);
         }
-        needToFlush = needToFlush | pendingDeletes.addFieldUpdate(new Update(index, Long.MIN_VALUE));
+        needToFlush = needToFlush
+            | pendingDeletes.addFieldUpdate(new Update(index, Long.MIN_VALUE));
       } finally {
         writeLock.unlock();
       }
@@ -215,34 +223,6 @@ public class CompositeActivityValues {
       flush();
     }
   }
-
-  /**
-   * Propagates the deletes to disk. After calling this method freed array
-   * indexes can be reused for different document uids
-   */
-  /*private void flushDeletes() {
-    if (pendingDeletes.updates.isEmpty()) {
-      return;
-    }
-    final UpdateBatch<Update> deleteBatch = pendingDeletes;
-    pendingDeletes = new UpdateBatch<Update>(activityConfig);
-    executor.submit(new Runnable() {
-      @Override
-      public void run() {
-        if (closed) {
-          return;
-        }
-        Collections.reverse(deleteBatch.updates);
-        activityStorage.flush(deleteBatch.updates);
-        synchronized (deletedIndexes) {
-
-          for (Update update : deleteBatch.updates) {
-            deletedIndexes.add(update.index);
-          }
-        }
-      }
-    });
-  }*/
 
   public void syncWithPersistentVersion(String version) {
     synchronized (this) {
@@ -285,13 +265,14 @@ public class CompositeActivityValues {
     if (flushDeletesNeeded) {
       pendingDeletes = new UpdateBatch<Update>(activityConfig);
     }
-    final boolean flushUpdatesNeeded = updateBatch.updates.size() > 0 || versionComparator.compare(lastVersion, metadata.version) != 0;
+    final boolean flushUpdatesNeeded = updateBatch.updates.size() > 0
+        || versionComparator.compare(lastVersion, metadata.version) != 0;
     if (!flushUpdatesNeeded && !flushDeletesNeeded) {
       return;
     }
     final UpdateBatch<Update> batchToPersist = flushUpdatesNeeded ? updateBatch : null;
     final List<Runnable> underlyingFlushes = new ArrayList<Runnable>(valuesMap.size());
-    //IF WE DON'T NEED TO FLUSH UPDATES,let's keep the persistent version as it is
+    // IF WE DON'T NEED TO FLUSH UPDATES,let's keep the persistent version as it is
     final String version = flushUpdatesNeeded ? lastVersion : metadata.version;
     if (flushUpdatesNeeded) {
       updateBatch = new UpdateBatch<CompositeActivityStorage.Update>(activityConfig);
@@ -326,7 +307,8 @@ public class CompositeActivityValues {
             currentDocumentsCounter.inc(uidToArrayIndex.size());
             reclaimedDocumentsCounter.clear();
             reclaimedDocumentsCounter.inc(deletedIndexes.size());
-            logger.info("Flush compositeActivityValues. Documents = " + uidToArrayIndex.size() + ", Deletes = " + deletedIndexes.size());
+            logger.info("Flush compositeActivityValues. Documents = " + uidToArrayIndex.size()
+                + ", Deletes = " + deletedIndexes.size());
           }
         } finally {
           globalLock.readLock().unlock();
@@ -354,17 +336,18 @@ public class CompositeActivityValues {
     for (ActivityValues activityIntValues : valuesMap.values()) {
       activityIntValues.close();
     }
-    
+
   }
 
   public int[] precomputeArrayIndexes(long[] uids) {
     int[] ret = new int[uids.length];
     for (int i = 0; i < uids.length; i++) {
       long uid = uids[i];
-      if (uid == ZoieIndexReader.DELETED_UID) {
+      if (uid == ZoieSegmentReader.DELETED_UID) {
         ret[i] = -1;
         continue;
       }
+
       Lock lock = globalLock.readLock();
       try {
         lock.lock();
@@ -404,23 +387,27 @@ public class CompositeActivityValues {
       if (!uidToArrayIndex.containsKey(uid)) {
         return Float.MIN_VALUE;
       }
-      return ((ActivityFloatValues) getActivityValues(column)).getFloatValue(uidToArrayIndex.get(uid));
+      return ((ActivityFloatValues) getActivityValues(column)).getFloatValue(uidToArrayIndex
+          .get(uid));
     } finally {
       lock.unlock();
     }
   }
+
   public long getLongValueByUID(long uid, String column) {
-      Lock lock = globalLock.readLock();
-      try {
-        lock.lock();
-        if (!uidToArrayIndex.containsKey(uid)) {
-          return Long.MIN_VALUE;
-        }
-        return ((ActivityLongValues) getActivityValues(column)).getLongValue(uidToArrayIndex.get(uid));
-      } finally {
-        lock.unlock();
+    Lock lock = globalLock.readLock();
+    try {
+      lock.lock();
+      if (!uidToArrayIndex.containsKey(uid)) {
+        return Long.MIN_VALUE;
       }
+      return ((ActivityLongValues) getActivityValues(column))
+          .getLongValue(uidToArrayIndex.get(uid));
+    } finally {
+      lock.unlock();
     }
+  }
+
   public int getIndexByUID(long uid) {
     Lock lock = globalLock.readLock();
     try {
@@ -434,11 +421,13 @@ public class CompositeActivityValues {
     }
   }
 
-  public static CompositeActivityValues createCompositeValues(ActivityPersistenceFactory activityPersistenceFactory,
-      Collection<SenseiSchema.FieldDefinition> fieldNames, List<TimeAggregateInfo> aggregatedActivities,
-      Comparator<String> versionComparator) {
+  public static CompositeActivityValues createCompositeValues(
+      ActivityPersistenceFactory activityPersistenceFactory,
+      Collection<SenseiSchema.FieldDefinition> fieldNames,
+      List<TimeAggregateInfo> aggregatedActivities, Comparator<String> versionComparator) {
     CompositeActivityValues ret = new CompositeActivityValues();
-    CompositeActivityStorage persistentColumnManager = activityPersistenceFactory.getCompositeStorage();
+    CompositeActivityStorage persistentColumnManager = activityPersistenceFactory
+        .getCompositeStorage();
 
     ret.metadata = activityPersistenceFactory.getMetadata();
 
@@ -459,17 +448,20 @@ public class CompositeActivityValues {
       count = ret.metadata.count;
     }
 
-    logger.info("Init compositeActivityValues. Documents = " + ret.uidToArrayIndex.size() + ", Deletes = " + ret.deletedIndexes.size());
+    logger.info("Init compositeActivityValues. Documents = " + ret.uidToArrayIndex.size()
+        + ", Deletes = " + ret.deletedIndexes.size());
     ret.versionComparator = versionComparator;
 
     ret.valuesMap = new HashMap<String, ActivityValues>(fieldNames.size());
     for (TimeAggregateInfo aggregatedActivity : aggregatedActivities) {
-      ret.valuesMap.put(aggregatedActivity.fieldName, TimeAggregatedActivityValues.createTimeAggregatedValues(aggregatedActivity.fieldName,
-          aggregatedActivity.times, count, activityPersistenceFactory));
+      ret.valuesMap.put(aggregatedActivity.fieldName, TimeAggregatedActivityValues
+          .createTimeAggregatedValues(aggregatedActivity.fieldName, aggregatedActivity.times,
+            count, activityPersistenceFactory));
     }
     for (SenseiSchema.FieldDefinition field : fieldNames) {
       if (field.isActivity && !ret.valuesMap.containsKey(field.name)) {
-        ActivityPrimitiveValues values = ActivityPrimitiveValues.createActivityPrimitiveValues(activityPersistenceFactory, field, count);
+        ActivityPrimitiveValues values = ActivityPrimitiveValues.createActivityPrimitiveValues(
+          activityPersistenceFactory, field, count);
         ret.valuesMap.put(field.name, values);
       }
     }

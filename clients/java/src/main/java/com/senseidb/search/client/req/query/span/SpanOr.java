@@ -20,6 +20,7 @@ import com.senseidb.search.client.req.query.QueryJsonHandler;
  *
  *
  */
+@SuppressWarnings("unused")
 @CustomJsonHandler(QueryJsonHandler.class)
 public class SpanOr extends Query {
   List<SpanTerm> clauses;

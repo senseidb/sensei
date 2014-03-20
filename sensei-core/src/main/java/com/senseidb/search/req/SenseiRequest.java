@@ -20,21 +20,20 @@ import com.browseengine.bobo.facets.FacetHandlerInitializerParam;
 import com.senseidb.search.req.mapred.SenseiMapReduce;
 import com.senseidb.util.RequestConverter2;
 
-public  class  SenseiRequest implements AbstractSenseiRequest, Cloneable
-{
-/**
-*
-*/
-private static final         long       serialVersionUID       =         1L;
-  
-/**
-*       The    transaction   ID
-*/
-private long   tid           =          -1;
+public class SenseiRequest implements AbstractSenseiRequest, Cloneable {
+  /**
+  *
+  */
+  private static final long serialVersionUID = 1L;
 
-  private HashMap<String,BrowseSelection> _selections;
-  private ArrayList<SortField> _sortSpecs;
-  private Map<String,FacetSpec> _facetSpecMap;
+  /**
+  *       The    transaction   ID
+  */
+  private long tid = -1;
+
+  private final HashMap<String, BrowseSelection> _selections;
+  private final ArrayList<SerializableSortField> _sortSpecs;
+  private Map<String, FacetSpec> _facetSpecMap;
   private Map<String, Integer> _origFacetSpecMaxCounts;
   private SenseiQuery _query;
   private int _offset;
@@ -43,30 +42,28 @@ private long   tid           =          -1;
   private int _origCount;
   private boolean _fetchStoredFields;
   private boolean _origFetchStoredFields;
-  private boolean _fetchStoredValue;
-  private Map<String,FacetHandlerInitializerParam> _facetInitParamMap;
+  private Map<String, FacetHandlerInitializerParam> _facetInitParamMap;
   private Set<Integer> _partitions;
   private boolean _showExplanation;
   private static Random _rand = new Random(System.nanoTime());
   private String _routeParam;
-	private String _groupBy;  // TODO: Leave here for backward compatible reason, will remove it later.
-	private String[] _groupByMulti;
-	private String[] _distinct;
+  private String _groupBy; // TODO: Leave here for backward compatible reason, will remove it later.
+  private String[] _groupByMulti;
+  private String[] _distinct;
   private int _maxPerGroup;
   private Set<String> _termVectorsToFetch;
-  private List<String> _selectList; // Select list (mostly used in BQL) 
+  private List<String> _selectList; // Select list (mostly used in BQL)
   private transient Set<String> _selectSet;
-  private SenseiMapReduce mapReduceFunction;
-  private List<SenseiError> errors;  
+  private SenseiMapReduce<?, ?> mapReduceFunction;
+  private List<SenseiError> errors;
   private Set<String> _storedFieldsToFetch;
 
-  public SenseiRequest(){
-    _facetInitParamMap = new HashMap<String,FacetHandlerInitializerParam>();
-    _selections=new HashMap<String,BrowseSelection>();
-    _sortSpecs=new ArrayList<SortField>();
-    _facetSpecMap=new HashMap<String,FacetSpec>();
+  public SenseiRequest() {
+    _facetInitParamMap = new HashMap<String, FacetHandlerInitializerParam>();
+    _selections = new HashMap<String, BrowseSelection>();
+    _sortSpecs = new ArrayList<SerializableSortField>();
+    _facetSpecMap = new HashMap<String, FacetSpec>();
     _fetchStoredFields = false;
-    _fetchStoredValue = false;
     _partitions = null;
     _showExplanation = false;
     _routeParam = null;
@@ -80,11 +77,11 @@ private long   tid           =          -1;
     _selectSet = null;
   }
 
-  public Set<String> getTermVectorsToFetch(){
+  public Set<String> getTermVectorsToFetch() {
     return _termVectorsToFetch;
   }
-  
-  public void setTermVectorsToFetch(Set<String> termVectorsToFetch){
+
+  public void setTermVectorsToFetch(Set<String> termVectorsToFetch) {
     _termVectorsToFetch = termVectorsToFetch;
   }
 
@@ -96,12 +93,11 @@ private long   tid           =          -1;
     this._storedFieldsToFetch = _storedFieldsToFetch;
   }
 
-    /**
-   * Get the transaction ID.
-   * @return the transaction ID.
-   */
-  public final long getTid()
-  {
+  /**
+  * Get the transaction ID.
+  * @return the transaction ID.
+  */
+  public final long getTid() {
     return tid;
   }
 
@@ -109,188 +105,159 @@ private long   tid           =          -1;
    * Set the transaction ID;
    * @param tid
    */
-  public final void setTid(long tid)
-  {
+  public final void setTid(long tid) {
     this.tid = tid;
   }
-  
-  
+
   public boolean isShowExplanation() {
     return _showExplanation;
-    }
+  }
 
-    public void setShowExplanation(boolean showExplanation) {
+  public void setShowExplanation(boolean showExplanation) {
     _showExplanation = showExplanation;
-    }
+  }
 
-  public void setPartitions(Set<Integer> partitions){
+  @Override
+  public void setPartitions(Set<Integer> partitions) {
     _partitions = partitions;
   }
-  
-  public Set<Integer> getPartitions(){
+
+  @Override
+  public Set<Integer> getPartitions() {
     return _partitions;
   }
 
-  public void setRouteParam(String routeParam)
-  {
+  public void setRouteParam(String routeParam) {
     _routeParam = routeParam;
   }
 
-  public String getRouteParam()
-  {
-    if (_routeParam != null)
-      return _routeParam;
+  @Override
+  public String getRouteParam() {
+    if (_routeParam != null) return _routeParam;
 
     return String.valueOf(_rand.nextInt());
   }
 
-  public void setGroupBy(String[] groupBy)
-  {
-		_groupByMulti = groupBy;
-    if (_groupByMulti != null && _groupByMulti.length != 0)
-      _groupBy = _groupByMulti[0];
+  public void setGroupBy(String[] groupBy) {
+    _groupByMulti = groupBy;
+    if (_groupByMulti != null && _groupByMulti.length != 0) _groupBy = _groupByMulti[0];
   }
 
-  public String[] getGroupBy()
-  {
-    if (_groupByMulti == null && _groupBy != null)
-      _groupByMulti = new String[]{_groupBy};
+  public String[] getGroupBy() {
+    if (_groupByMulti == null && _groupBy != null) _groupByMulti = new String[] { _groupBy };
 
-		return _groupByMulti;
+    return _groupByMulti;
   }
 
-  public void setDistinct(String[] distinct)
-  {
+  public void setDistinct(String[] distinct) {
     _distinct = distinct;
   }
 
-  public String[] getDistinct()
-  {
+  public String[] getDistinct() {
     return _distinct;
   }
 
-  public void setMaxPerGroup(int maxPerGroup)
-  {
+  public void setMaxPerGroup(int maxPerGroup) {
     _maxPerGroup = maxPerGroup;
   }
 
-  public int getMaxPerGroup()
-  {
+  public int getMaxPerGroup() {
     return _maxPerGroup;
   }
 
-  public Map<String,FacetHandlerInitializerParam> getFacetHandlerInitParamMap(){
+  public Map<String, FacetHandlerInitializerParam> getFacetHandlerInitParamMap() {
     return _facetInitParamMap;
   }
-  
-  public void setFacetHandlerInitParamMap(Map<String,FacetHandlerInitializerParam> paramMap){
+
+  public void setFacetHandlerInitParamMap(Map<String, FacetHandlerInitializerParam> paramMap) {
     _facetInitParamMap = paramMap;
   }
 
-  public void putAllFacetHandlerInitializerParams(Map<String,FacetHandlerInitializerParam> params){
+  public void putAllFacetHandlerInitializerParams(Map<String, FacetHandlerInitializerParam> params) {
     _facetInitParamMap.putAll(params);
   }
-  
-  public void setFacetHandlerInitializerParam(String name,FacetHandlerInitializerParam param){
+
+  public void setFacetHandlerInitializerParam(String name, FacetHandlerInitializerParam param) {
     _facetInitParamMap.put(name, param);
   }
-  
-  public FacetHandlerInitializerParam getFacetHandlerInitializerParam(String name){
+
+  public FacetHandlerInitializerParam getFacetHandlerInitializerParam(String name) {
     return _facetInitParamMap.get(name);
   }
 
-  public Set<String> getSelectionNames(){
+  public Set<String> getSelectionNames() {
     return _selections.keySet();
   }
-  
-  public void removeSelection(String name){
+
+  public void removeSelection(String name) {
     _selections.remove(name);
   }
-  
-  public void setFacetSpecs(Map<String,FacetSpec> facetSpecMap)
-  {
+
+  public void setFacetSpecs(Map<String, FacetSpec> facetSpecMap) {
     _facetSpecMap = facetSpecMap;
   }
-  
-  public Map<String,FacetSpec> getFacetSpecs()
-  {
+
+  public Map<String, FacetSpec> getFacetSpecs() {
     return _facetSpecMap;
   }
-  
-  public void saveState()
-  {
+
+  public void saveState() {
     _origOffset = _offset;
     _origCount = _count;
     _origFetchStoredFields = _fetchStoredFields;
-    if (_origFacetSpecMaxCounts == null && _facetSpecMap != null)
-    {
-      _origFacetSpecMaxCounts= new HashMap<String, Integer>();
-      for (Map.Entry<String, FacetSpec> entry : _facetSpecMap.entrySet())
-      {
+    if (_origFacetSpecMaxCounts == null && _facetSpecMap != null) {
+      _origFacetSpecMaxCounts = new HashMap<String, Integer>();
+      for (Map.Entry<String, FacetSpec> entry : _facetSpecMap.entrySet()) {
         FacetSpec spec = entry.getValue();
-        if (spec != null)
-        {
+        if (spec != null) {
           _origFacetSpecMaxCounts.put(entry.getKey(), spec.getMaxCount());
         }
       }
     }
   }
 
-  public void restoreState()
-  {
+  public void restoreState() {
     _offset = _origOffset;
     _count = _origCount;
     _fetchStoredFields = _origFetchStoredFields;
-    if (_facetSpecMap != null)
-    {
-      for (Map.Entry<String, FacetSpec> entry : _facetSpecMap.entrySet())
-      {
+    if (_facetSpecMap != null) {
+      for (Map.Entry<String, FacetSpec> entry : _facetSpecMap.entrySet()) {
         FacetSpec spec = entry.getValue();
-        if (spec != null)
-        {
+        if (spec != null) {
           spec.setMaxCount(_origFacetSpecMaxCounts.get(entry.getKey()));
         }
       }
     }
   }
 
-  public int getSelectionCount()
-  {
+  public int getSelectionCount() {
     return _selections.size();
   }
-  
-  public void clearSelections(){
+
+  public void clearSelections() {
     _selections.clear();
   }
-  
+
   /**
    * Gets the number of facet specs
    * @return number of facet pecs
    * @see #setFacetSpec(String, FacetSpec)
    * @see #getFacetSpec(String)
    */
-  public int getFacetSpecCount(){
+  public int getFacetSpecCount() {
     return _facetSpecMap.size();
   }
-  
-  public void clearSort(){
+
+  public void clearSort() {
     _sortSpecs.clear();
   }
-  
-  public boolean isFetchStoredFields(){
+
+  public boolean isFetchStoredFields() {
     return _fetchStoredFields;
   }
-  
-  public void setFetchStoredFields(boolean fetchStoredFields){
+
+  public void setFetchStoredFields(boolean fetchStoredFields) {
     _fetchStoredFields = fetchStoredFields;
-  }
-  
-  public boolean isFetchStoredValue(){
-    return _fetchStoredValue;
-  }
-  
-  public void setFetchStoredValue(boolean fetchStoredValue){
-    _fetchStoredValue = fetchStoredValue;
   }
 
   /**
@@ -299,20 +266,20 @@ private long   tid           =          -1;
    * @param facetSpec Facet spec
    * @see #getFacetSpec(String)
    */
-  public void setFacetSpec(String name,FacetSpec facetSpec){
-    _facetSpecMap.put(name,facetSpec);
+  public void setFacetSpec(String name, FacetSpec facetSpec) {
+    _facetSpecMap.put(name, facetSpec);
   }
-  
+
   /**
    * Gets a facet spec
    * @param name field name
    * @return facet spec
    * @see #setFacetSpec(String, FacetSpec)
    */
-  public FacetSpec getFacetSpec(String name){
+  public FacetSpec getFacetSpec(String name) {
     return _facetSpecMap.get(name);
   }
-  
+
   /**
    * Gets the number of hits to return. Part of the paging parameters.
    * @return number of hits to return.
@@ -354,16 +321,16 @@ private long   tid           =          -1;
    * @param query query object
    * @see #getQuery()
    */
-  public void setQuery(SenseiQuery query){
-    _query=query;
+  public void setQuery(SenseiQuery query) {
+    _query = query;
   }
-  
+
   /**
    * Gets the search query
    * @return query object
    * @see #setQuery(SenseiQuery)
    */
-  public SenseiQuery getQuery(){
+  public SenseiQuery getQuery() {
     return _query;
   }
 
@@ -384,36 +351,36 @@ private long   tid           =          -1;
    * @param sel selection
    * @see #getSelections()
    */
-  public void addSelection(BrowseSelection sel){
-    _selections.put(sel.getFieldName(),sel);
+  public void addSelection(BrowseSelection sel) {
+    _selections.put(sel.getFieldName(), sel);
   }
-  
+
   /**
    * Gets all added browse selections
    * @return added selections
    * @see #addSelection(BrowseSelection)
    */
-  public BrowseSelection[] getSelections(){
+  public BrowseSelection[] getSelections() {
     return _selections.values().toArray(new BrowseSelection[_selections.size()]);
   }
-  
+
   /**
    * Gets selection by field name
    * @param fieldname
    * @return selection on the field
    */
-  public BrowseSelection getSelection(String fieldname){
+  public BrowseSelection getSelection(String fieldname) {
     return _selections.get(fieldname);
   }
-  
+
   /**
    * Add a sort spec
    * @param sortSpec sort spec
-   * @see #getSort() 
+   * @see #getSort()
    * @see #setSort(SortField[])
    */
-  public void addSortField(SortField sortSpec){
-    _sortSpecs.add(sortSpec);
+  public void addSortField(SortField sortSpec) {
+    _sortSpecs.add(new SerializableSortField(sortSpec));
   }
 
   /**
@@ -422,7 +389,7 @@ private long   tid           =          -1;
    * @see #getSort()
    * @see #setSort(SortField[])
    */
-  public void addSortFields(SortField[] sortSpecs){
+  public void addSortFields(SortField[] sortSpecs) {
     for (SortField field : sortSpecs) {
       addSortField(field);
     }
@@ -434,20 +401,24 @@ private long   tid           =          -1;
    * @see #setSort(SortField[])
    * @see #addSortField(SortField)
    */
-  public SortField[] getSort(){
-    return _sortSpecs.toArray(new SortField[_sortSpecs.size()]);
+  public SortField[] getSort() {
+    SortField[] fields = new SortField[_sortSpecs.size()];
+    for (int i = 0; i < fields.length; ++i) {
+      fields[i] = _sortSpecs.get(i).getSortField();
+    }
+    return fields;
   }
-  
+
   /**
    * Sets the sort criteria
    * @param sorts sort criteria
    * @see #addSortField(SortField)
    * @see #getSort()
    */
-  public void setSort(SortField[] sorts){
+  public void setSort(SortField[] sorts) {
     _sortSpecs.clear();
-    for (int i=0;i<sorts.length;++i){
-      _sortSpecs.add(sorts[i]);
+    for (int i = 0; i < sorts.length; ++i) {
+      addSortField(sorts[i]);
     }
   }
 
@@ -455,8 +426,7 @@ private long   tid           =          -1;
    * Sets the select list.
    * @param selectList select list
    */
-  public void setSelectList(List<String> selectList)
-  {
+  public void setSelectList(List<String> selectList) {
     _selectList = selectList;
     _selectSet = null;
   }
@@ -465,49 +435,39 @@ private long   tid           =          -1;
    * Gets the select list.
    * @return select list.
    */
-  public List<String> getSelectList()
-  {
+  public List<String> getSelectList() {
     return _selectList;
   }
 
-  public Set<String> getSelectSet()
-  {
-    if (_selectSet == null &&
-        _selectList != null &&
-        !(_selectList.size() == 1 && "*".equals(_selectList.get(0))))
-    {
+  public Set<String> getSelectSet() {
+    if (_selectSet == null && _selectList != null
+        && !(_selectList.size() == 1 && "*".equals(_selectList.get(0)))) {
       _selectSet = new HashSet<String>(_selectList);
     }
     return _selectSet;
   }
-  
+
   /** Represents sorting by document score (relevancy). */
-  public static final SortField FIELD_SCORE = new SortField (null, SortField.SCORE);
-  public static final SortField FIELD_SCORE_REVERSE = new SortField (null, SortField.SCORE, true);
+  public static final SortField FIELD_SCORE = new SortField(null, SortField.Type.SCORE);
+  public static final SortField FIELD_SCORE_REVERSE = new SortField(null, SortField.Type.SCORE,
+      true);
 
   /** Represents sorting by document number (index order). */
-  public static final SortField FIELD_DOC = new SortField (null, SortField.DOC);
-  public static final SortField FIELD_DOC_REVERSE = new SortField (null, SortField.DOC, true);
+  public static final SortField FIELD_DOC = new SortField(null, SortField.Type.DOC);
+  public static final SortField FIELD_DOC_REVERSE = new SortField(null, SortField.Type.DOC, true);
 
   @Override
-  public String toString(){
-    StringBuilder buf=new StringBuilder();
-    if(_query != null)
-      buf.append("query: ").append(_query.toString()).append('\n');
+  public String toString() {
+    StringBuilder buf = new StringBuilder();
+    if (_query != null) buf.append("query: ").append(_query.toString()).append('\n');
     buf.append("page: [").append(_offset).append(',').append(_count).append("]\n");
-    if(_sortSpecs != null)
-      buf.append("sort spec: ").append(_sortSpecs).append('\n');
-    if(_selections != null)
-      buf.append("selections: ").append(_selections).append('\n');
-    if(_facetSpecMap != null)
-      buf.append("facet spec: ").append(_facetSpecMap).append('\n');
-    if (_routeParam != null)
-      buf.append("route param: ").append(_routeParam).append('\n');
-    if (_groupBy != null)
-      buf.append("group by: ").append(_groupBy).append('\n');
+    if (_sortSpecs != null) buf.append("sort spec: ").append(_sortSpecs).append('\n');
+    if (_selections != null) buf.append("selections: ").append(_selections).append('\n');
+    if (_facetSpecMap != null) buf.append("facet spec: ").append(_facetSpecMap).append('\n');
+    if (_routeParam != null) buf.append("route param: ").append(_routeParam).append('\n');
+    if (_groupBy != null) buf.append("group by: ").append(_groupBy).append('\n');
     buf.append("max per group: ").append(_maxPerGroup).append('\n');
     buf.append("fetch stored fields: ").append(_fetchStoredFields).append('\n');
-    buf.append("fetch stored value: ").append(_fetchStoredValue).append('\n');
     return buf.toString();
   }
 
@@ -515,26 +475,24 @@ private long   tid           =          -1;
   public SenseiRequest clone() {
     SenseiRequest clone = new SenseiRequest();
     clone.setTid(this.getTid());
-    
+
     BrowseSelection[] selections = this.getSelections();
-    for(BrowseSelection selection : selections)
+    for (BrowseSelection selection : selections)
       clone.addSelection(selection);
-    
-    for(SortField sort : this.getSort())
+
+    for (SortField sort : this.getSort())
       clone.addSortField(sort);
-    
-    
+
     Map<String, FacetSpec> cloneFacetSpecs = new HashMap<String, FacetSpec>();
-    for(Entry<String, FacetSpec> facetSpec : this.getFacetSpecs().entrySet()) {
+    for (Entry<String, FacetSpec> facetSpec : this.getFacetSpecs().entrySet()) {
       cloneFacetSpecs.put(facetSpec.getKey(), facetSpec.getValue().clone());
     }
-    
+
     clone.setFacetSpecs(cloneFacetSpecs);
     clone.setQuery(this.getQuery());
     clone.setOffset(this.getOffset());
     clone.setCount(this.getCount());
     clone.setFetchStoredFields(this.isFetchStoredFields());
-    clone.setFetchStoredValue(this.isFetchStoredValue());
     clone.setFacetHandlerInitParamMap(this.getFacetHandlerInitParamMap());
     clone.setPartitions(this.getPartitions());
     clone.setShowExplanation(this.isShowExplanation());
@@ -555,7 +513,7 @@ private long   tid           =          -1;
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof SenseiRequest)) return false;
-    SenseiRequest b = (SenseiRequest)o;
+    SenseiRequest b = (SenseiRequest) o;
 
     if (getCount() != b.getCount()) return false;
     if (getOffset() != b.getOffset()) return false;
@@ -570,12 +528,10 @@ private long   tid           =          -1;
     }
     if (getGroupBy() == null) {
       if (b.getGroupBy() != null) return false;
-    }
-    else {
+    } else {
       if (!getGroupBy().equals(b.getGroupBy())) return false;
     }
-    if (getMaxPerGroup() != b.getMaxPerGroup())
-      return false;
+    if (getMaxPerGroup() != b.getMaxPerGroup()) return false;
     if (getPartitions() == null) {
       if (b.getPartitions() != null) return false;
     } else {
@@ -586,10 +542,10 @@ private long   tid           =          -1;
   }
 
   private boolean initParamsAreEqual(Map<String, FacetHandlerInitializerParam> a,
-                                     Map<String, FacetHandlerInitializerParam> b) {
+      Map<String, FacetHandlerInitializerParam> b) {
     if (a.size() != b.size()) return false;
 
-    for (Entry<String,FacetHandlerInitializerParam> entry : a.entrySet()) {
+    for (Entry<String, FacetHandlerInitializerParam> entry : a.entrySet()) {
       String key = entry.getKey();
       if (!b.containsKey(key)) return false;
       if (!areFacetHandlerInitializerParamsEqual(entry.getValue(), b.get(key))) return false;
@@ -598,7 +554,8 @@ private long   tid           =          -1;
     return true;
   }
 
-  private boolean areFacetHandlerInitializerParamsEqual(FacetHandlerInitializerParam a, FacetHandlerInitializerParam b) {
+  private boolean areFacetHandlerInitializerParamsEqual(FacetHandlerInitializerParam a,
+      FacetHandlerInitializerParam b) {
     if (!setsAreEqual(a.getBooleanParamNames(), b.getBooleanParamNames())) return false;
     if (!setsAreEqual(a.getIntParamNames(), b.getIntParamNames())) return false;
     if (!setsAreEqual(a.getDoubleParamNames(), b.getDoubleParamNames())) return false;
@@ -619,20 +576,20 @@ private long   tid           =          -1;
       if (!Arrays.equals(a.getLongParam(name), b.getLongParam(name))) return false;
     }
     for (String name : a.getStringParamNames()) {
-      if (!Arrays.equals(a.getStringParam(name).toArray(new String[0]), b.getStringParam(name).toArray(new String[0]))) return false;
+      if (!Arrays.equals(a.getStringParam(name).toArray(new String[0]), b.getStringParam(name)
+          .toArray(new String[0]))) return false;
     }
-/* NOT YET SUPPORTED
-    for (String name : a.getByteArrayParamNames()) {
-      assertTrue(Arrays.equals(a.getByteArrayParam(name), b.getByteArrayParam(name)));
-    }
-*/
+    /*
+     * NOT YET SUPPORTED for (String name : a.getByteArrayParamNames()) {
+     * assertTrue(Arrays.equals(a.getByteArrayParam(name), b.getByteArrayParam(name))); }
+     */
     return true;
   }
 
   private boolean facetSpecsAreEqual(Map<String, FacetSpec> a, Map<String, FacetSpec> b) {
     if (a.size() != b.size()) return false;
 
-    for (Entry<String,FacetSpec> entry : a.entrySet()) {
+    for (Entry<String, FacetSpec> entry : a.entrySet()) {
       String key = entry.getKey();
       if (!(b.containsKey(key))) return false;
       if (!facetSpecsAreEqual(entry.getValue(), b.get(key))) return false;
@@ -642,11 +599,8 @@ private long   tid           =          -1;
   }
 
   private boolean facetSpecsAreEqual(FacetSpec a, FacetSpec b) {
-    return
-        (a.getMaxCount() == b.getMaxCount())
-        && (a.getMinHitCount() == b.getMinHitCount())
-        && (a.getOrderBy() == b.getOrderBy())
-        && (a.isExpandSelection() == b.isExpandSelection());
+    return (a.getMaxCount() == b.getMaxCount()) && (a.getMinHitCount() == b.getMinHitCount())
+        && (a.getOrderBy() == b.getOrderBy()) && (a.isExpandSelection() == b.isExpandSelection());
   }
 
   private boolean selectionsAreEqual(BrowseSelection[] a, BrowseSelection[] b) {
@@ -660,34 +614,31 @@ private long   tid           =          -1;
   }
 
   private boolean selectionsAreEqual(BrowseSelection a, BrowseSelection b) {
-    return
-        (a.getFieldName().equals(b.getFieldName()))
+    return (a.getFieldName().equals(b.getFieldName()))
         && (Arrays.equals(a.getValues(), b.getValues()))
         && (Arrays.equals(a.getNotValues(), b.getNotValues()))
         && (a.getSelectionOperation().equals(b.getSelectionOperation()))
         && (a.getSelectionProperties().equals(b.getSelectionProperties()));
   }
-  
- 
 
+  @SuppressWarnings("rawtypes")
   public SenseiMapReduce getMapReduceFunction() {
     return mapReduceFunction;
   }
 
-  public void setMapReduceFunction(SenseiMapReduce mapReduceFunction) {
+  public void setMapReduceFunction(SenseiMapReduce<?, ?> mapReduceFunction) {
     this.mapReduceFunction = mapReduceFunction;
   }
-  
+
   public List<SenseiError> getErrors() {
-    if (errors == null)
-      errors = new ArrayList<SenseiError>();
+    if (errors == null) errors = new ArrayList<SenseiError>();
 
     return errors;
   }
 
+  @Override
   public void addError(SenseiError error) {
-    if (errors == null)
-      errors = new ArrayList<SenseiError>();
+    if (errors == null) errors = new ArrayList<SenseiError>();
 
     errors.add(error);
   }
@@ -703,7 +654,7 @@ private long   tid           =          -1;
 
     return true;
   }
-  
+
   /**
    * Builds SenseiRequest based on a JSON object.
    *
@@ -715,9 +666,7 @@ private long   tid           =          -1;
    * @return The built SenseiRequest.
    */
   public static SenseiRequest fromJSON(final JSONObject json,
-                                       final Map<String, String[]> facetInfoMap)
-    throws Exception
-  {
+      final Map<String, String[]> facetInfoMap) throws Exception {
     return RequestConverter2.fromJSON(json, facetInfoMap);
   }
 

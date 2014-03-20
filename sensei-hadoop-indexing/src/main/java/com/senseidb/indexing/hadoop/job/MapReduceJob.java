@@ -35,12 +35,13 @@ import com.senseidb.indexing.hadoop.util.MRConfig;
 import com.senseidb.indexing.hadoop.util.MRJobConfig;
 import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
 
+@SuppressWarnings("deprecation")
 public class MapReduceJob extends Configured {
 
   private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();
   private static final Logger logger = Logger.getLogger(MapReduceJob.class);
 
-  public JobConf createJob(Class MRClass) throws IOException, URISyntaxException {
+  public JobConf createJob(Class<?> MRClass) throws IOException, URISyntaxException {
 
     Configuration conf = getConf();
     Path[] inputPaths;
@@ -64,10 +65,11 @@ public class MapReduceJob extends Configured {
     String indexSubDirPrefix = conf.get(SenseiJobConfig.INDEX_SUBDIR_PREFIX, "");
 
     FileSystem fs = FileSystem.get(conf);
-    if (fs.exists(outputPath) && conf.getBoolean(SenseiJobConfig.FORCE_OUTPUT_OVERWRITE, false))
-      fs.delete(outputPath, true);
-    if (fs.exists(new Path(indexPath)) && conf.getBoolean(SenseiJobConfig.FORCE_OUTPUT_OVERWRITE, false)) 
-      fs.delete(new Path(indexPath), true);
+    if (fs.exists(outputPath) && conf.getBoolean(SenseiJobConfig.FORCE_OUTPUT_OVERWRITE, false)) fs
+        .delete(outputPath, true);
+    if (fs.exists(new Path(indexPath))
+        && conf.getBoolean(SenseiJobConfig.FORCE_OUTPUT_OVERWRITE, false)) fs.delete(new Path(
+        indexPath), true);
 
     shards = createShards(indexPath, numShards, conf, indexSubDirPrefix);
 
@@ -149,16 +151,6 @@ public class MapReduceJob extends Configured {
 
     jobConf.setReduceSpeculativeExecution(false);
     return jobConf;
-  }
-
-  private static FileSystem getFileSystem(String user) {
-    Configuration conf = new Configuration();
-    conf.set("hadoop.job.ugi", user);
-    try {
-      return FileSystem.get(conf);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private static Shard[] createShards(String indexPath, int numShards,

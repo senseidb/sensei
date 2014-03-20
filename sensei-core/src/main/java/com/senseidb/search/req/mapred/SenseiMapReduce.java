@@ -13,13 +13,15 @@ import org.json.JSONObject;
  * @param <MapResult>
  * @param <ReduceResult>
  */
-public interface SenseiMapReduce<MapResult extends Serializable, ReduceResult extends Serializable> extends Serializable {
+public interface SenseiMapReduce<MapResult extends Serializable, ReduceResult extends Serializable>
+    extends Serializable {
   /**
    * "mapReduce":{"function":"com.senseidb.search.req.mapred.functions.MaxMapReduce","parameters":{"column":"groupid"}} 
    * the argument corresponds to the parameters object in Json request. It is used to initialize the mapred job
    * 
    */
   public void init(JSONObject params);
+
   /**
    * The map function. It can get the docId  from the docIds array containing value from 0 to docIdCount. 
    * All the docIds with array indexes >= docIdCount should be ignored
@@ -31,25 +33,28 @@ public interface SenseiMapReduce<MapResult extends Serializable, ReduceResult ex
    * @param facetCountsAccessor 
    * @return arbitrary map function results
    */
-  public MapResult map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountsAccessor);
+  public MapResult map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor,
+      FacetCountAccessor facetCountsAccessor);
+
   /**
    * Merge map results objects to reduce memory and serialization costs. If this method will not merge map results, there is a high chance, that you'd get 
    * outOfMemory in case there is a significant number of documents indexed
    * @param mapResults
    * @return
    */
-  public List<MapResult>  combine(List<MapResult> mapResults, CombinerStage combinerStage);
+  public List<MapResult> combine(List<MapResult> mapResults, CombinerStage combinerStage);
+
   /**
    * Reduce the merged map results
    * @param combineResults
    * @return
    */
-  public ReduceResult  reduce(List<MapResult> combineResults);
+  public ReduceResult reduce(List<MapResult> combineResults);
+
   /**
    * Converts the result of the reduce function into JsonObject, so that it can be sent back to the client
    * @param reduceResult
    * @return
    */
-  public JSONObject  render(ReduceResult reduceResult);
+  public JSONObject render(ReduceResult reduceResult);
 }
-

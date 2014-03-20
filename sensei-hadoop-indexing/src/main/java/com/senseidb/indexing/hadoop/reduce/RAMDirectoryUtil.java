@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
+import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.RAMDirectory;
@@ -41,8 +42,8 @@ public class RAMDirectoryUtil {
    * @param names  the names of the files to write
    * @throws IOException
    */
-  public static void writeRAMFiles(DataOutput out, RAMDirectory dir,
-      String[] names) throws IOException {
+  public static void writeRAMFiles(DataOutput out, RAMDirectory dir, String[] names)
+      throws IOException {
     out.writeInt(names.length);
 
     for (int i = 0; i < names.length; i++) {
@@ -54,15 +55,14 @@ public class RAMDirectoryUtil {
         // can we avoid the extra copy?
         IndexInput input = null;
         try {
-          input = dir.openInput(names[i], BUFFER_SIZE);
+          IOContext context = new IOContext();
+          input = dir.openInput(names[i], context);
 
           int position = 0;
           byte[] buffer = new byte[BUFFER_SIZE];
 
           while (position < length) {
-            int len =
-                position + BUFFER_SIZE <= length ? BUFFER_SIZE
-                    : (int) (length - position);
+            int len = position + BUFFER_SIZE <= length ? BUFFER_SIZE : (int) (length - position);
             input.readBytes(buffer, 0, len);
             out.write(buffer, 0, len);
             position += len;
@@ -82,8 +82,7 @@ public class RAMDirectoryUtil {
    * @param dir  the ram directory
    * @throws IOException
    */
-  public static void readRAMFiles(DataInput in, RAMDirectory dir)
-      throws IOException {
+  public static void readRAMFiles(DataInput in, RAMDirectory dir) throws IOException {
     int numFiles = in.readInt();
 
     for (int i = 0; i < numFiles; i++) {
@@ -94,15 +93,14 @@ public class RAMDirectoryUtil {
         // can we avoid the extra copy?
         IndexOutput output = null;
         try {
-          output = dir.createOutput(name);
+          IOContext context = new IOContext();
+          output = dir.createOutput(name, context);
 
           int position = 0;
           byte[] buffer = new byte[BUFFER_SIZE];
 
           while (position < length) {
-            int len =
-                position + BUFFER_SIZE <= length ? BUFFER_SIZE
-                    : (int) (length - position);
+            int len = position + BUFFER_SIZE <= length ? BUFFER_SIZE : (int) (length - position);
             in.readFully(buffer, 0, len);
             output.writeBytes(buffer, 0, len);
             position += len;

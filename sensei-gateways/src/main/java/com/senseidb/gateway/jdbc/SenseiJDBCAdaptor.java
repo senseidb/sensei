@@ -7,13 +7,15 @@ import java.sql.SQLException;
 import java.util.Set;
 
 public abstract class SenseiJDBCAdaptor {
-	
+
   protected Set<Integer> partitions = null;
-  
-  abstract public PreparedStatement buildStatment(Connection conn,String fromVersion) throws SQLException;
+
+  abstract public PreparedStatement buildStatment(Connection conn, String fromVersion)
+      throws SQLException;
+
   abstract public String extractVersion(ResultSet resultSet) throws SQLException;
 
-  public void setPartitions(Set<Integer> partitions){
+  public void setPartitions(Set<Integer> partitions) {
     this.partitions = partitions;
   }
 }

@@ -19,7 +19,7 @@ import java.util.Map;
  */
 public class RelevanceValues {
   protected Map<String, Object> values = new HashMap<String, Object>();
-  
+
   public static RelevanceValuesBuilder builder() {
     return new RelevanceValuesBuilder();
   }
@@ -27,11 +27,13 @@ public class RelevanceValues {
   public Map<String, Object> getValues() {
     return values;
   }
-private RelevanceValues() {
-  // TODO Auto-generated constructor stub
-}
+
+  private RelevanceValues() {
+    // TODO Auto-generated constructor stub
+  }
+
   public static class RelevanceValuesBuilder {
-    private RelevanceValues relevanceValues;
+    private final RelevanceValues relevanceValues;
 
     public RelevanceValuesBuilder() {
       relevanceValues = new RelevanceValues();
@@ -56,7 +58,9 @@ private RelevanceValues() {
         throw new IllegalStateException("The value should be either String or Number");
       }
     }
-    public RelevanceValuesBuilder addMapValue(String variableName, List keys, List values) {     
+
+    @SuppressWarnings("rawtypes")
+    public RelevanceValuesBuilder addMapValue(String variableName, List keys, List values) {
       for (int i = 0; i < keys.size(); i++) {
         checkType(keys.get(i));
         checkType(values.get(i));
@@ -66,7 +70,8 @@ private RelevanceValues() {
       ret.put("value", values);
       relevanceValues.values.put(variableName, ret);
       return this;
-   }
+    }
+
     public RelevanceValuesBuilder addMapValue(String variableName, Map<Object, Object> valuesMap) {
       List<Object> keys = new ArrayList<Object>(valuesMap.size());
       List<Object> values = new ArrayList<Object>(valuesMap.size());
@@ -82,6 +87,7 @@ private RelevanceValues() {
       relevanceValues.values.put(variableName, ret);
       return this;
     }
+
     public RelevanceValues build() {
       return relevanceValues;
     }

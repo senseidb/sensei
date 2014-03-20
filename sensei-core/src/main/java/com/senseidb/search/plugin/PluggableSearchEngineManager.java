@@ -13,7 +13,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import proj.zoie.api.Zoie;
-import proj.zoie.api.ZoieIndexReader;
 import proj.zoie.api.ZoieMultiReader;
 import proj.zoie.api.ZoieSegmentReader;
 import proj.zoie.hourglass.impl.HourglassListener;
@@ -26,15 +25,13 @@ import com.senseidb.indexing.activity.deletion.DeletionListener;
 import com.senseidb.plugin.SenseiPluginRegistry;
 import com.senseidb.search.node.SenseiCore;
 
-public class PluggableSearchEngineManager implements DeletionListener, HourglassListener<IndexReader, IndexReader> {
+public class PluggableSearchEngineManager implements DeletionListener,
+    HourglassListener<IndexReader, IndexReader> {
   private final static Logger logger = Logger.getLogger(PluggableSearchEngineManager.class);
   private ShardingStrategy shardingStrategy;
   private SenseiCore senseiCore;
   private String version;
   private Comparator<String> versionComparator;
-  private SenseiSchema senseiSchema;
-  private SenseiPluginRegistry pluginRegistry;
-  private int nodeId;
   private List<PluggableSearchEngine> pluggableEngines = new ArrayList<PluggableSearchEngine>();
   private int maxPartition;
   private boolean acceptEventsForAllPartitions;
@@ -52,25 +49,25 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     return acceptEventsForAllPartitions;
   }
 
-  public final void init(String indexDirectory, int nodeId, SenseiSchema senseiSchema, Comparator<String> versionComparator,
-      SenseiPluginRegistry pluginRegistry, ShardingStrategy shardingStrategy) {
-    this.nodeId = nodeId;
-    this.senseiSchema = senseiSchema;
+  public final void init(String indexDirectory, int nodeId, SenseiSchema senseiSchema,
+      Comparator<String> versionComparator, SenseiPluginRegistry pluginRegistry,
+      ShardingStrategy shardingStrategy) {
     this.versionComparator = versionComparator;
 
-    this.pluginRegistry = pluginRegistry;
     this.shardingStrategy = shardingStrategy;
 
-    maxPartition = pluginRegistry.getConfiguration().getInt("sensei.index.manager.default.maxpartition.id", 0) + 1;
-    pluggableEngines = new ArrayList<PluggableSearchEngine>(pluginRegistry.resolveBeansByListKey("sensei.search.pluggableEngines",
-        PluggableSearchEngine.class));
+    maxPartition = pluginRegistry.getConfiguration().getInt(
+      "sensei.index.manager.default.maxpartition.id", 0) + 1;
+    pluggableEngines = new ArrayList<PluggableSearchEngine>(pluginRegistry.resolveBeansByListKey(
+      "sensei.search.pluggableEngines", PluggableSearchEngine.class));
     if (CompositeActivityManager.activitiesPresent(senseiSchema)) {
       pluggableEngines.add(new CompositeActivityManager());
     }
 
     acceptEventsForAllPartitions = false;
     for (PluggableSearchEngine engine : pluggableEngines) {
-      engine.init(indexDirectory, nodeId, senseiSchema, versionComparator, pluginRegistry, shardingStrategy);
+      engine.init(indexDirectory, nodeId, senseiSchema, versionComparator, pluginRegistry,
+        shardingStrategy);
       if (engine.acceptEventsForAllPartitions()) {
         acceptEventsForAllPartitions = true;
       }
@@ -99,7 +96,7 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
 
   /**
    * Updates all the corresponding activity columns found in the document
-   * 
+   *
    * @param event
    * @param version
    * @return
@@ -112,7 +109,8 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
     }
     boolean validForCurrentNode;
     try {
-      validForCurrentNode = Arrays.binarySearch(senseiCore.getPartitions(), shardingStrategy.caculateShard(maxPartition, event)) >= 0;
+      validForCurrentNode = Arrays.binarySearch(senseiCore.getPartitions(),
+        shardingStrategy.caculateShard(maxPartition, event)) >= 0;
     } catch (JSONException e) {
       throw new RuntimeException(e);
     }
@@ -136,9 +134,7 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
 
   /*
    * (non-Javadoc)
-   * 
-   * @see
-   * com.senseidb.indexing.activity.deletion.DeletionListener#onDelete(org.apache
+   * @see com.senseidb.indexing.activity.deletion.DeletionListener#onDelete(org.apache
    * .lucene.index.IndexReader, long[])
    */
   @Override
@@ -159,21 +155,14 @@ public class PluggableSearchEngineManager implements DeletionListener, Hourglass
   }
 
   @Override
-  public void onIndexReaderCleanUp(ZoieIndexReader<IndexReader> indexReader) {
-    if (indexReader instanceof ZoieMultiReader) {
-      ZoieSegmentReader[] segments = (ZoieSegmentReader[]) ((ZoieMultiReader) indexReader).getSequentialSubReaders();
-      for (ZoieSegmentReader segmentReader : segments) {
-        handleSegment(segmentReader);
-      }
-    } else if (indexReader instanceof ZoieSegmentReader) {
-      handleSegment((ZoieSegmentReader) indexReader);
-    } else {
-      throw new UnsupportedOperationException("Only segment and multisegment readers can be handled");
+  public void onIndexReaderCleanUp(ZoieMultiReader<IndexReader> indexReader) {
+    ZoieSegmentReader<?>[] segments = indexReader.getSubReaders();
+    for (ZoieSegmentReader<?> segmentReader : segments) {
+      handleSegment(segmentReader);
     }
-
   }
 
-  private void handleSegment(ZoieSegmentReader segmentReader) {
+  private void handleSegment(ZoieSegmentReader<?> segmentReader) {
     onDelete(segmentReader, segmentReader.getUIDArray());
   }
 

@@ -1,6 +1,5 @@
 package com.senseidb.test;
 
-
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -40,25 +39,19 @@ import com.senseidb.search.req.SenseiResult;
 import com.senseidb.servlet.DefaultSenseiJSONServlet;
 import com.senseidb.svc.api.SenseiException;
 import com.senseidb.svc.impl.HttpRestSenseiServiceImpl;
-import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
-
-public class TestHttpRestSenseiServiceImpl extends TestCase
-{
+public class TestHttpRestSenseiServiceImpl extends TestCase {
   private static final int EXPECTED_COUNT = 72;
-  private static  final int EXPECTED_OFFSET = 227;
-  private static  final boolean EXPECTED_FETCH_STORED_FIELDS = true;
-  private static  final boolean EXPECTED_SHOW_EXPLANATION = true;
+  private static final int EXPECTED_OFFSET = 227;
+  private static final boolean EXPECTED_FETCH_STORED_FIELDS = true;
+  private static final boolean EXPECTED_SHOW_EXPLANATION = true;
 
-  public TestHttpRestSenseiServiceImpl(String name)
-  {
+  public TestHttpRestSenseiServiceImpl(String name) {
     super(name);
   }
 
-  public void testSenseiResultParsing()
-      throws Exception
-  {
+  public void testSenseiResultParsing() throws Exception {
     SenseiRequest aRequest = createNonRandomSenseiRequest();
     SenseiResult aResult = createMockResultFromRequest(aRequest);
     JSONObject resultJSONObj = DefaultSenseiJSONServlet.buildJSONResult(aRequest, aResult);
@@ -101,27 +94,27 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     Document doc = new Document();
 
     for (int i = 0; i < 10; i++) {
-      doc.add(new org.apache.lucene.document.Field("name" + i, "value" + i, Field.Store.YES, Field.Index.ANALYZED));
+      doc.add(new org.apache.lucene.document.TextField("name" + i, "value" + i, Field.Store.YES));
     }
 
     return doc;
   }
 
-  private Map<String,String[]> createFieldValues(int uid) {
-    Map<String,String[]> map = new HashMap<String,String[]>();
+  private Map<String, String[]> createFieldValues(int uid) {
+    Map<String, String[]> map = new HashMap<String, String[]>();
 
     for (int i = 0; i < 10; i++) {
-      map.put(String.format("key %s %s", uid, i), new String[]{"hello" + i, "world" + i});
+      map.put(String.format("key %s %s", uid, i), new String[] { "hello" + i, "world" + i });
     }
 
     return map;
   }
 
-  private Map<String,Object[]> createRawFieldValues(int uid) {
-    Map<String,Object[]> map = new HashMap<String,Object[]>();
+  private Map<String, Object[]> createRawFieldValues(int uid) {
+    Map<String, Object[]> map = new HashMap<String, Object[]>();
 
     for (int i = 0; i < 10; i++) {
-      map.put(String.format("raw key %s %s", uid, i), new String[] { "hello" + i, "world" + i} );
+      map.put(String.format("raw key %s %s", uid, i), new String[] { "hello" + i, "world" + i });
     }
 
     return map;
@@ -148,7 +141,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
 
       List<BrowseFacet> bfList = new ArrayList<BrowseFacet>();
 
-      Map<String,FacetSpec> facetSpecs = request.getFacetSpecs();
+      Map<String, FacetSpec> facetSpecs = request.getFacetSpecs();
 
       // copy the requests facets over
       for (String facetName : facetSpecs.keySet()) {
@@ -158,7 +151,8 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
         bfList.add(bf);
       }
 
-      MappedFacetAccessible mfa = new MappedFacetAccessible(bfList.toArray(new BrowseFacet[bfList.size()]));
+      MappedFacetAccessible mfa = new MappedFacetAccessible(bfList.toArray(new BrowseFacet[bfList
+          .size()]));
 
       facetAccessibleMap.put(fieldName, mfa);
     }
@@ -166,11 +160,11 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     return facetAccessibleMap;
   }
 
-  public void testURIBuilding()
-      throws JSONException, SenseiException, UnsupportedEncodingException, URISyntaxException, MalformedURLException
-  {
+  public void testURIBuilding() throws JSONException, SenseiException,
+      UnsupportedEncodingException, URISyntaxException, MalformedURLException {
     SenseiRequest aRequest = createNonRandomSenseiRequest();
-    List<NameValuePair> queryParams = HttpRestSenseiServiceImpl.convertRequestToQueryParams(aRequest);
+    List<NameValuePair> queryParams = HttpRestSenseiServiceImpl
+        .convertRequestToQueryParams(aRequest);
     HttpRestSenseiServiceImpl senseiService = createSenseiService();
     URI requestURI = senseiService.buildRequestURI(queryParams);
 
@@ -178,25 +172,25 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
 
     List<NameValuePair> parsedParams = URLEncodedUtils.parse(requestURI, "UTF-8");
     MockServletRequest mockServletRequest = MockServletRequest.create(parsedParams);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     SenseiRequest bRequest = DefaultSenseiJSONServlet.convertSenseiRequest(params);
     assertEquals(aRequest, bRequest);
   }
 
-  public void testConvertSenseiRequest()
-      throws SenseiException, UnsupportedEncodingException, JSONException
-  {
+  public void testConvertSenseiRequest() throws SenseiException, UnsupportedEncodingException,
+      JSONException {
     SenseiRequest testRequest = createNonRandomSenseiRequest();
     List<NameValuePair> list = HttpRestSenseiServiceImpl.convertRequestToQueryParams(testRequest);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     SenseiRequest resultRequest = DefaultSenseiJSONServlet.convertSenseiRequest(params);
     assertEquals(testRequest, resultRequest);
   }
 
-  public void testConvertScalarValues()
-      throws SenseiException, UnsupportedEncodingException, JSONException
-  {
+  public void testConvertScalarValues() throws SenseiException, UnsupportedEncodingException,
+      JSONException {
     SenseiRequest aRequest = new SenseiRequest();
 
     aRequest.setCount(EXPECTED_COUNT);
@@ -207,14 +201,13 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     SenseiRequest bRequest = new SenseiRequest();
     List<NameValuePair> list = HttpRestSenseiServiceImpl.convertRequestToQueryParams(aRequest);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertScalarParams(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
 
-  public void testInitParams()
-      throws UnsupportedEncodingException
-  {
+  public void testInitParams() throws UnsupportedEncodingException {
     SenseiRequest aRequest = new SenseiRequest();
     Map<String, FacetHandlerInitializerParam> initParams = createInitParams();
     aRequest.putAllFacetHandlerInitializerParams(initParams);
@@ -223,13 +216,13 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     List<NameValuePair> qparams = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertFacetInitParams(qparams, initParams);
     MockServletRequest mockServletRequest = MockServletRequest.create(qparams);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertInitParams(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
 
-  public void testFacetSpecs()
-  {
+  public void testFacetSpecs() {
     SenseiRequest aRequest = new SenseiRequest();
     Map<String, FacetSpec> facetSpecMap = createFacetSpecMap();
     aRequest.setFacetSpecs(facetSpecMap);
@@ -238,13 +231,13 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     List<NameValuePair> list = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertFacetSpecs(list, facetSpecMap);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertFacetParam(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
 
-  public void testSortFields()
-  {
+  public void testSortFields() {
     SenseiRequest aRequest = new SenseiRequest();
     final SortField[] sortFields = createSortFields();
     aRequest.addSortFields(sortFields);
@@ -253,14 +246,13 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     List<NameValuePair> list = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertSortFieldParams(list, sortFields);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertSortParam(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
 
-  public void testSenseiQuery()
-      throws SenseiException, JSONException
-  {
+  public void testSenseiQuery() throws SenseiException, JSONException {
     SenseiRequest aRequest = new SenseiRequest();
     SenseiQuery senseiQuery = createSenseiQuery();
     aRequest.setQuery(senseiQuery);
@@ -269,22 +261,19 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     List<NameValuePair> list = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertSenseiQuery(list, senseiQuery);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertSenseiQuery(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
 
-  public void testNullSenseiQuery()
-      throws SenseiException
-  {
+  public void testNullSenseiQuery() throws SenseiException {
     List<NameValuePair> list = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertSenseiQuery(list, null);
     assertTrue(list.size() == 0);
   }
 
-  public void testPartitions()
-      throws SenseiException, JSONException
-  {
+  public void testPartitions() throws SenseiException, JSONException {
     SenseiRequest aRequest = new SenseiRequest();
     Set<Integer> partitions = createPartitions();
     aRequest.setPartitions(partitions);
@@ -293,7 +282,8 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     List<NameValuePair> list = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertPartitionParams(list, partitions);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertPartitionParams(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
@@ -304,9 +294,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     assertTrue(list.size() == 0);
   }
 
-  public void testBrowseSelections()
-      throws JSONException
-  {
+  public void testBrowseSelections() throws JSONException {
     SenseiRequest aRequest = new SenseiRequest();
     BrowseSelection[] selections = createBrowseSelections();
     aRequest.addSelections(selections);
@@ -316,25 +304,17 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     List<NameValuePair> list = new ArrayList<NameValuePair>();
     HttpRestSenseiServiceImpl.convertSelectionNames(list, bRequest);
     MockServletRequest mockServletRequest = MockServletRequest.create(list);
-    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(mockServletRequest));
+    DataConfiguration params = new DataConfiguration(new ServletRequestConfiguration(
+        mockServletRequest));
     DefaultSenseiJSONServlet.convertSelectParam(bRequest, params);
     assertEquals(aRequest, bRequest);
   }
 
   private HttpRestSenseiServiceImpl createSenseiService() {
-    return new HttpRestSenseiServiceImpl(
-        "http",
-        "localhost",
-        80,
-        "/sensei",
-        2000,
-        5,
-        null);
+    return new HttpRestSenseiServiceImpl("http", "localhost", 80, "/sensei", 2000, 5, null);
   }
 
-  private SenseiRequest createNonRandomSenseiRequest()
-      throws JSONException
-  {
+  private SenseiRequest createNonRandomSenseiRequest() throws JSONException {
     SenseiRequest req = new SenseiRequest();
 
     createScalarValues(req);
@@ -360,7 +340,7 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     HashSet<Integer> partitions = new HashSet<Integer>();
 
     for (int i = 0; i < 10; i++) {
-      partitions.add(i*i);
+      partitions.add(i * i);
     }
 
     return partitions;
@@ -381,13 +361,12 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
     return list.toArray(new BrowseSelection[list.size()]);
   }
 
-  SenseiQuery createSenseiQuery()
-      throws JSONException
-  {
+  SenseiQuery createSenseiQuery() throws JSONException {
 
     JSONObject obj = new FastJSONObject();
 
-    obj.put("query", "key words are useful");  // 'query' in the JSONObj gets translated into 'q' in the GET request
+    obj.put("query", "key words are useful"); // 'query' in the JSONObj gets translated into 'q' in
+                                              // the GET request
 
     for (int i = 0; i < 10; i++) {
       obj.put("key" + i, "val" + i);
@@ -401,20 +380,19 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
   SortField[] createSortFields() {
     List<SortField> list = new ArrayList<SortField>();
 
-    list.add(new SortField(null, SortField.DOC));
-    list.add(new SortField(null, SortField.DOC, true));
+    list.add(new SortField(null, SortField.Type.DOC));
+    list.add(new SortField(null, SortField.Type.DOC, true));
 
-    list.add(new SortField(null, SortField.SCORE));
-    list.add(new SortField(null, SortField.SCORE, true));
+    list.add(new SortField(null, SortField.Type.SCORE));
+    list.add(new SortField(null, SortField.Type.SCORE, true));
 
-    list.add(new SortField("fieldCUSTOM", SortField.CUSTOM, false));
-    list.add(new SortField("fieldCUSTOMREV", SortField.CUSTOM, true));
+    list.add(new SortField("fieldCUSTOM", SortField.Type.CUSTOM, false));
+    list.add(new SortField("fieldCUSTOMREV", SortField.Type.CUSTOM, true));
 
     return list.toArray(new SortField[list.size()]);
   }
 
-  Map<String, FacetSpec> createFacetSpecMap()
-  {
+  Map<String, FacetSpec> createFacetSpecMap() {
     Map<String, FacetSpec> map = new HashMap<String, FacetSpec>();
 
     FacetSpec spec = new FacetSpec();
@@ -436,62 +414,68 @@ public class TestHttpRestSenseiServiceImpl extends TestCase
       spec.setExpandSelection(i % 2 == 0);
       spec.setMaxCount(i * 5);
       spec.setMinHitCount(i);
-      spec.setOrderBy(i % 2 == 0 ? FacetSpec.FacetSortSpec.OrderValueAsc : FacetSpec.FacetSortSpec.OrderHitsDesc);
+      spec.setOrderBy(i % 2 == 0 ? FacetSpec.FacetSortSpec.OrderValueAsc
+          : FacetSpec.FacetSortSpec.OrderHitsDesc);
       map.put("facet" + i, spec);
     }
 
-/* NOT YET SUPPORTED
-    spec = new FacetSpec();
-    spec.setExpandSelection(true);
-    spec.setMaxCount(50);
-    spec.setMinHitCount(9);
-    spec.setOrderBy(FacetSpec.FacetSortSpec.OrderByCustom);
-    map.put("facet3", spec);
-*/
+    /*
+     * NOT YET SUPPORTED spec = new FacetSpec(); spec.setExpandSelection(true);
+     * spec.setMaxCount(50); spec.setMinHitCount(9);
+     * spec.setOrderBy(FacetSpec.FacetSortSpec.OrderByCustom); map.put("facet3", spec);
+     */
 
     return map;
   }
 
-  Map<String, FacetHandlerInitializerParam> createInitParams()
-  {
+  Map<String, FacetHandlerInitializerParam> createInitParams() {
     Map<String, FacetHandlerInitializerParam> map = new HashMap<String, FacetHandlerInitializerParam>();
 
     DefaultFacetHandlerInitializerParam param;
 
     param = new DefaultFacetHandlerInitializerParam();
     for (int i = 0; i < 2; i++) {
-      param.putBooleanParam("boolParam" + i, new boolean[]{false});
+      param.putBooleanParam("boolParam" + i, new boolean[] { false });
       map.put("boolFacet" + i, param);
     }
 
     param = new DefaultFacetHandlerInitializerParam();
     for (int i = 0; i < 2; i++) {
-      param.putIntParam("intParam" + i, new int[]{42});
+      param.putIntParam("intParam" + i, new int[] { 42 });
       map.put("intFacet" + i, param);
     }
 
-/*  NOT YET SUPPORTED
-    param = new DefaultFacetHandlerInitializerParam();
-    param.putByteArrayParam("bytearrayParam", new byte[]{1, 2, 3});
-    map.put("bytearrayFacet", param);
- */
+    /*
+     * NOT YET SUPPORTED param = new DefaultFacetHandlerInitializerParam();
+     * param.putByteArrayParam("bytearrayParam", new byte[]{1, 2, 3}); map.put("bytearrayFacet",
+     * param);
+     */
 
     param = new DefaultFacetHandlerInitializerParam();
     for (int i = 0; i < 2; i++) {
-      param.putStringParam("stringParam" + i, new ArrayList<String>(){{ add("woot"); }});
+      param.putStringParam("stringParam" + i, new ArrayList<String>() {
+        /**
+         *
+         */
+        private static final long serialVersionUID = 1L;
+
+        {
+          add("woot");
+        }
+      });
       map.put("stringFacet" + i, param);
     }
 
     param = new DefaultFacetHandlerInitializerParam();
     for (int i = 0; i < 2; i++) {
-      param.putDoubleParam("doubleParam" + i, new double[]{3.141592});
+      param.putDoubleParam("doubleParam" + i, new double[] { 3.141592 });
       map.put("doubleFacet" + i, param);
     }
 
     param = new DefaultFacetHandlerInitializerParam();
     for (int i = 0; i < 2; i++) {
-      param.putLongParam("longParam"+i, new long[]{3141592, 123456});
-      map.put("longFacet"+i, param);
+      param.putLongParam("longParam" + i, new long[] { 3141592, 123456 });
+      map.put("longFacet" + i, param);
     }
 
     return map;

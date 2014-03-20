@@ -23,11 +23,10 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StoredField;
 import org.apache.lucene.util.Version;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 
 import proj.zoie.api.ZoieSegmentReader;
 import proj.zoie.api.indexing.AbstractZoieIndexable;
@@ -42,131 +41,127 @@ import com.senseidb.indexing.hadoop.keyvalueformat.IntermediateForm;
 import com.senseidb.indexing.hadoop.keyvalueformat.Shard;
 import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
 
-public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object, Shard, IntermediateForm> {
+@SuppressWarnings("deprecation")
+public class SenseiMapper extends MapReduceBase implements
+    Mapper<Object, Object, Shard, IntermediateForm> {
 
-	private final static Logger logger = Logger.getLogger(SenseiMapper.class);
-	private static DefaultJsonSchemaInterpreter _defaultInterpreter = null;
-	private volatile boolean _isConfigured = false;
-	private Configuration _conf;
-	private Shard[] _shards;
-	
-	private ShardingStrategy _shardingStategy;
-	private MapInputConverter _converter;
-	
-	private static Analyzer analyzer;
-	
+  private final static Logger logger = Logger.getLogger(SenseiMapper.class);
+  private static DefaultJsonSchemaInterpreter _defaultInterpreter = null;
+  private volatile boolean _isConfigured = false;
+  private Configuration _conf;
+  private Shard[] _shards;
 
-	  
-    
-    public void map(Object key, Object value, 
-                    OutputCollector<Shard, IntermediateForm> output, 
-                    Reporter reporter) throws IOException {
-    	
-        if(_isConfigured == false)
-	      throw new IllegalStateException("Mapper's configure method wasn't sucessful. May not get the correct schema or Lucene Analyzer.");
+  private ShardingStrategy _shardingStategy;
+  private MapInputConverter _converter;
 
-        JSONObject json = null;
-    	try{
-    		json = _converter.getJsonInput(key, value, _conf);
-    		json = _converter.doFilter(json);
-    	}catch(Exception e){
-    		ExceptionUtils.printRootCauseStackTrace(e);
-    		throw new IllegalStateException("data conversion or filtering failed inside mapper. \n");
-    	}
-    	
-    	
-    	if( _defaultInterpreter == null)
-    		reporter.incrCounter("Map", "Interpreter_null", 1);
-    	
-    	if(  _defaultInterpreter != null && json != null && analyzer != null){
+  private static Analyzer analyzer;
 
-    	      ZoieIndexable indexable = _defaultInterpreter.convertAndInterpret(json);
-    	      
-    	      IndexingReq[] idxReqs = indexable.buildIndexingReqs();
-    	      if(idxReqs.length>0){
-    	    	  Document doc = idxReqs[0].getDocument();
-    		  	  ZoieSegmentReader.fillDocumentID(doc, indexable.getUID());
-    	    	  
-                  if (indexable.isStorable()){
-                    byte[] bytes = indexable.getStoreValue();
-                    if (bytes!=null){
-                      doc.add(new Field(AbstractZoieIndexable.DOCUMENT_STORE_FIELD,bytes));
-                    }
-                  }
-    		  	  
-    		  	  //now we have uid and lucene Doc;
-		          IntermediateForm form = new IntermediateForm();
-		          form.configure(_conf);
-		          form.process(doc, analyzer);
-		          form.closeWriter();
+  @Override
+  public void map(Object key, Object value, OutputCollector<Shard, IntermediateForm> output,
+      Reporter reporter) throws IOException {
+    if (_isConfigured == false) throw new IllegalStateException(
+        "Mapper's configure method wasn't sucessful. May not get the correct schema or Lucene Analyzer.");
 
-		          int chosenShard = -1;
-				  try {
-					  chosenShard = _shardingStategy.caculateShard(_shards.length, json);
-				  } catch (JSONException e) {
-					  throw new IOException("sharding dose not work for mapper.");
-				  }
-		          if (chosenShard >= 0) {
-		            // insert into one shard
-		            output.collect(_shards[chosenShard], form);
-		          } else {
-		            throw new IOException("Chosen shard for insert must be >= 0. current shard is: " + chosenShard);
-		          }
-    	      }
-    	}
-        
+    JSONObject json = null;
+    try {
+      json = _converter.getJsonInput(key, value, _conf);
+      if (json != null) {
+        json = _converter.doFilter(json);
+      }
+    } catch (Exception e) {
+      ExceptionUtils.printRootCauseStackTrace(e);
+      throw new IllegalStateException("data conversion or filtering failed inside mapper", e);
     }
-    
 
-	@Override
-	public void configure(JobConf job) {
-		super.configure(job);
-		_conf = job;
-	    _shards = Shard.getIndexShards(_conf);
-		
-		_shardingStategy =
-		        (ShardingStrategy) ReflectionUtils.newInstance(
-				job.getClass(SenseiJobConfig.DISTRIBUTION_POLICY,
-				DummyShardingStrategy.class, ShardingStrategy.class), job);
-		
-		_converter = (MapInputConverter) ReflectionUtils.newInstance(
-				job.getClass(SenseiJobConfig.MAPINPUT_CONVERTER,
-						DummyMapInputConverter.class, MapInputConverter.class), job);
-		
-		try {
-			setSchema(job);
-			setAnalyzer(job);		   	 
-			
-			_isConfigured = true;
-		} catch (Exception e) {
-			e.printStackTrace();
-			_isConfigured = false;
-		}
+    if (_defaultInterpreter == null) reporter.incrCounter("Map", "Interpreter_null", 1);
+
+    if (_defaultInterpreter != null && json != null && analyzer != null) {
+      ZoieIndexable indexable = _defaultInterpreter.convertAndInterpret(json);
+
+      IndexingReq[] idxReqs = indexable.buildIndexingReqs();
+      if (idxReqs.length > 0) {
+        Document doc = idxReqs[0].getDocument();
+        ZoieSegmentReader.fillDocumentID(doc, indexable.getUID());
+
+        if (indexable.isStorable()) {
+          byte[] bytes = indexable.getStoreValue();
+          if (bytes != null) {
+            doc.add(new StoredField(AbstractZoieIndexable.DOCUMENT_STORE_FIELD, bytes));
+          }
+        }
+
+        // now we have uid and lucene Doc;
+        IntermediateForm form = new IntermediateForm();
+        form.configure(_conf);
+        form.process(doc, analyzer);
+        form.closeWriter();
+
+        int chosenShard = -1;
+        try {
+          chosenShard = _shardingStategy.caculateShard(_shards.length, json);
+        } catch (JSONException e) {
+          throw new IOException("sharding dose not work for mapper.");
+        }
+        if (chosenShard >= 0) {
+          // insert into one shard
+          output.collect(_shards[chosenShard], form);
+        } else {
+          throw new IOException("Chosen shard for insert must be >= 0. current shard is: "
+              + chosenShard);
+        }
+      }
     }
-	
-	private void setAnalyzer(JobConf conf) throws Exception{
-		
-		if(analyzer != null)
-			return;
-		
-		String version = _conf.get(SenseiJobConfig.DOCUMENT_ANALYZER_VERSION);
-		
-		String analyzerName = _conf.get(SenseiJobConfig.DOCUMENT_ANALYZER);
-		if(analyzerName == null)
-			 throw new IllegalStateException("analyzer name has not been specified");
-		
-		Class analyzerClass = Class.forName(analyzerName);
-		
-		if(null != version){
-		    Constructor constructor = analyzerClass.getConstructor(Version.class);
-		    analyzer = (Analyzer) constructor.newInstance((Version) Enum.valueOf((Class)Class.forName("org.apache.lucene.util.Version"), version));
-		}else{
-		    Constructor constructor = analyzerClass.getConstructor();
-		    analyzer = (Analyzer) constructor.newInstance();
-		}
-	}
 
-	private void setSchema(JobConf conf) throws Exception {
+  }
+
+  @Override
+  public void configure(JobConf job) {
+    super.configure(job);
+    _conf = job;
+    _shards = Shard.getIndexShards(_conf);
+
+    _shardingStategy = ReflectionUtils.newInstance(job.getClass(
+      SenseiJobConfig.DISTRIBUTION_POLICY, DummyShardingStrategy.class, ShardingStrategy.class),
+      job);
+
+    _converter = ReflectionUtils.newInstance(job.getClass(SenseiJobConfig.MAPINPUT_CONVERTER,
+      DummyMapInputConverter.class, MapInputConverter.class), job);
+
+    try {
+      setSchema(job);
+      setAnalyzer(job);
+
+      _isConfigured = true;
+    } catch (Exception e) {
+      e.printStackTrace();
+      _isConfigured = false;
+    }
+  }
+
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  private void setAnalyzer(JobConf conf) throws Exception {
+
+    if (analyzer != null) return;
+
+    String version = _conf.get(SenseiJobConfig.DOCUMENT_ANALYZER_VERSION);
+
+    String analyzerName = _conf.get(SenseiJobConfig.DOCUMENT_ANALYZER);
+    if (analyzerName == null) throw new IllegalStateException(
+        "analyzer name has not been specified");
+
+    Class analyzerClass = Class.forName(analyzerName);
+
+    if (null != version) {
+      Constructor constructor = analyzerClass.getConstructor(Version.class);
+      analyzer = (Analyzer) constructor.newInstance((Version) Enum.valueOf(
+        (Class) Class.forName("org.apache.lucene.util.Version"), version));
+    } else {
+      Constructor constructor = analyzerClass.getConstructor();
+      analyzer = (Analyzer) constructor.newInstance();
+    }
+  }
+
+  private void setSchema(JobConf conf) throws Exception {
 
     String _schema_uri = null;
     String metadataFileName = conf.get(SenseiJobConfig.SCHEMA_FILE_URL);
@@ -182,35 +177,31 @@ public class SenseiMapper extends MapReduceBase implements Mapper<Object, Object
       }
     }
 
-		if (metadataFileName != null && metadataFileName.length() > 0) {
-			_schema_uri = "file:///" + metadataFileName;
+    if (metadataFileName != null && metadataFileName.length() > 0) {
+      _schema_uri = "file:///" + metadataFileName;
 
-			if (_defaultInterpreter == null) {
-				
-				logger.info("schema file is:" + _schema_uri);
-				URL url = new URL(_schema_uri);
-				URLConnection conn = url.openConnection();
-				conn.connect();
+      if (_defaultInterpreter == null) {
 
-				File xmlSchema = new File(url.toURI());
-				if (!xmlSchema.exists()) {
-					throw new ConfigurationException(
-							"schema not file");
-				}
-				DocumentBuilderFactory dbf = DocumentBuilderFactory
-						.newInstance();
-				dbf.setIgnoringComments(true);
-				DocumentBuilder db = dbf.newDocumentBuilder();
-				org.w3c.dom.Document schemaXml = db
-						.parse(xmlSchema);
-				schemaXml.getDocumentElement().normalize();
-				JSONObject schemaData = SchemaConverter
-						.convert(schemaXml);
+        logger.info("schema file is:" + _schema_uri);
+        URL url = new URL(_schema_uri);
+        URLConnection conn = url.openConnection();
+        conn.connect();
 
-				SenseiSchema schema = SenseiSchema.build(schemaData);
-				_defaultInterpreter = new DefaultJsonSchemaInterpreter(schema);
-			}
-		}
-	}
+        File xmlSchema = new File(url.toURI());
+        if (!xmlSchema.exists()) {
+          throw new ConfigurationException("schema not file");
+        }
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setIgnoringComments(true);
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        org.w3c.dom.Document schemaXml = db.parse(xmlSchema);
+        schemaXml.getDocumentElement().normalize();
+        JSONObject schemaData = SchemaConverter.convert(schemaXml);
+
+        SenseiSchema schema = SenseiSchema.build(schemaData);
+        _defaultInterpreter = new DefaultJsonSchemaInterpreter(schema);
+      }
+    }
+  }
 
 }

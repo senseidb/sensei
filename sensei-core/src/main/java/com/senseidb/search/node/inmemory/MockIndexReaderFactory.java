@@ -8,40 +8,36 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.util.Version;
 
 import proj.zoie.api.IndexReaderFactory;
-import proj.zoie.api.ZoieIndexReader;
+import proj.zoie.api.ZoieMultiReader;
 
-import com.browseengine.bobo.api.BoboIndexReader;
+import com.browseengine.bobo.api.BoboSegmentReader;
 
-public class MockIndexReaderFactory<T> implements  IndexReaderFactory<ZoieIndexReader<BoboIndexReader> > {
-  private Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_35);
- 
-  private final List<ZoieIndexReader<BoboIndexReader>> readers;
-  
-  public MockIndexReaderFactory(List<ZoieIndexReader<BoboIndexReader>> readers) {
+public class MockIndexReaderFactory implements IndexReaderFactory<BoboSegmentReader> {
+  private final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_43);
+
+  private final List<ZoieMultiReader<BoboSegmentReader>> readers;
+
+  public MockIndexReaderFactory(List<ZoieMultiReader<BoboSegmentReader>> readers) {
     this.readers = readers;
-   
+
   }
-  
+
   @Override
-  public List<ZoieIndexReader<BoboIndexReader>> getIndexReaders() throws IOException {
+  public List<ZoieMultiReader<BoboSegmentReader>> getIndexReaders() throws IOException {
     return readers;
-    
   }
- 
+
   @Override
   public Analyzer getAnalyzer() {
-   
     return analyzer;
   }
 
   @Override
-  public void returnIndexReaders(List<ZoieIndexReader<BoboIndexReader>> r) {
-   
+  public void returnIndexReaders(List<ZoieMultiReader<BoboSegmentReader>> r) {
   }
 
   @Override
   public String getCurrentReaderVersion() {
-    
     return null;
   }
 

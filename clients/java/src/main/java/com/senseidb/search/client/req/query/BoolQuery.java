@@ -26,8 +26,8 @@ public class BoolQuery extends Query {
   double boost;
   Boolean disableCoord;
 
-  public BoolQuery(List<Query> must, List<Query> must_not, List<Query> should, Integer minimumNumberShouldMatch,
-      double boost, Boolean disableCoord) {
+  public BoolQuery(List<Query> must, List<Query> must_not, List<Query> should,
+      Integer minimumNumberShouldMatch, double boost, Boolean disableCoord) {
     super();
     this.must = must;
     this.must_not = must_not;

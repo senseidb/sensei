@@ -16,53 +16,51 @@ import zu.core.cluster.ZuCluster;
 import com.senseidb.svc.api.SenseiService;
 import com.senseidb.svc.impl.ClusteredSenseiServiceImpl;
 
-public class SenseiHttpInvokerServiceServlet extends
-		ZookeeperConfigurableServlet {
-	
-	private static final long serialVersionUID = 1L;
+public class SenseiHttpInvokerServiceServlet extends ZookeeperConfigurableServlet {
 
-	private ClusteredSenseiServiceImpl innerSvc;
-	private HttpInvokerServiceExporter target;
-	
-	private ZuCluster zuCluster = null;
-	
-	public void setClusterClient(ZuCluster zuCluster) {
-	  this.zuCluster = zuCluster;
-	}
+  private static final long serialVersionUID = 1L;
 
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		
-		innerSvc = new ClusteredSenseiServiceImpl(senseiConf,  versionComparator, zuCluster);
-		target = new HttpInvokerServiceExporter();
-		target.setService(innerSvc);
-		target.setServiceInterface(SenseiService.class);
-		target.afterPropertiesSet();
-	}
-	
-	protected void service(HttpServletRequest request, HttpServletResponse response)
-	throws ServletException, IOException {
+  private ClusteredSenseiServiceImpl innerSvc;
+  private HttpInvokerServiceExporter target;
 
-      try {
-	    this.target.handleRequest(request, response);
+  private ZuCluster zuCluster = null;
+
+  public void setClusterClient(ZuCluster zuCluster) {
+    this.zuCluster = zuCluster;
+  }
+
+  @Override
+  public void init(ServletConfig config) throws ServletException {
+    super.init(config);
+
+    innerSvc = new ClusteredSenseiServiceImpl(senseiConf, versionComparator, zuCluster);
+    target = new HttpInvokerServiceExporter();
+    target.setService(innerSvc);
+    target.setServiceInterface(SenseiService.class);
+    target.afterPropertiesSet();
+  }
+
+  protected void service(HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
+
+    try {
+      this.target.handleRequest(request, response);
+    } catch (HttpRequestMethodNotSupportedException ex) {
+      String[] supportedMethods = ((HttpRequestMethodNotSupportedException) ex)
+          .getSupportedMethods();
+      if (supportedMethods != null) {
+        response.setHeader("Allow", StringUtils.arrayToDelimitedString(supportedMethods, ", "));
       }
-      catch (HttpRequestMethodNotSupportedException ex) {
-	    String[] supportedMethods = ((HttpRequestMethodNotSupportedException) ex).getSupportedMethods();
-	    if (supportedMethods != null) {
-		  response.setHeader("Allow", StringUtils.arrayToDelimitedString(supportedMethods, ", "));
-	    }
-	    response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, ex.getMessage());
-      }
+      response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED, ex.getMessage());
     }
+  }
 
-	@Override
-	public void destroy() {
-		try{
-		  innerSvc.shutdown();
-		}
-		finally{
-		  super.destroy();
-		}
-	}
+  @Override
+  public void destroy() {
+    try {
+      innerSvc.shutdown();
+    } finally {
+      super.destroy();
+    }
+  }
 }

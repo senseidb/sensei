@@ -10,11 +10,12 @@ public class DistinctUIDCount implements SenseiMapReduce<HashSet<Long>, Integer>
   private static final long serialVersionUID = 1L;
 
   public void init(JSONObject params) {
-  
+
   }
 
   @Override
-  public HashSet<Long> map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public HashSet<Long> map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor,
+      FacetCountAccessor facetCountAccessor) {
     HashSet<Long> ret = new HashSet<Long>(docIdCount);
     for (int i = 0; i < docIdCount; i++) {
       ret.add(uids[docIds.get(i)]);
@@ -42,12 +43,12 @@ public class DistinctUIDCount implements SenseiMapReduce<HashSet<Long>, Integer>
 
   @Override
   public JSONObject render(Integer reduceResult) {
-    
+
     try {
       return new JSONObject().put("distinctUidCount", reduceResult);
-    } catch (JSONException e) {      
+    } catch (JSONException e) {
       throw new RuntimeException(e);
     }
   }
-  
+
 }

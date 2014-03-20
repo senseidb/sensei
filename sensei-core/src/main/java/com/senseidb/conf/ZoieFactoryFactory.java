@@ -9,5 +9,6 @@ import com.senseidb.search.node.SenseiIndexReaderDecorator;
 import com.senseidb.search.node.SenseiZoieFactory;
 
 public interface ZoieFactoryFactory {
-	SenseiZoieFactory<?> getZoieFactory(File idxDir,ZoieIndexableInterpreter<?> interpreter,SenseiIndexReaderDecorator decorator,ZoieConfig config);
+  SenseiZoieFactory<?> getZoieFactory(File idxDir, ZoieIndexableInterpreter<?> interpreter,
+      SenseiIndexReaderDecorator decorator, ZoieConfig config);
 }

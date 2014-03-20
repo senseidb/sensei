@@ -6,24 +6,26 @@ package com.senseidb.search.client.req;
     - the number of search results to return
       the starting offset of search results
  */
+@SuppressWarnings("unused")
 public class Paging {
-    /**
-     * the number of search results to return
+  /**
+   * the number of search results to return
+   */
+  private int count;
+  /**
+   * the starting offset of search results
 
-     */
-    private int count;
-    /**
-     * the starting offset of search results
+   */
+  private int offset;
 
-     */
-    private int offset;
-    public Paging() {
-        // TODO Auto-generated constructor stub
-    }
-    public Paging(int count, int offset) {
-        super();
-        this.count = count;
-        this.offset = offset;
-    }
+  public Paging() {
+    // TODO Auto-generated constructor stub
+  }
+
+  public Paging(int count, int offset) {
+    super();
+    this.count = count;
+    this.offset = offset;
+  }
 
 }

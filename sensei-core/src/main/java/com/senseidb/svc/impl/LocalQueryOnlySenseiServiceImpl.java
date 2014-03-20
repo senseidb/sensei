@@ -1,9 +1,11 @@
 package com.senseidb.svc.impl;
 
 import java.io.File;
+import java.util.HashMap;
 
+import org.apache.commons.configuration.MapConfiguration;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.util.Version;
 import org.json.JSONObject;
 
@@ -26,22 +28,28 @@ public class LocalQueryOnlySenseiServiceImpl implements SenseiService {
 
   private CoreSenseiServiceImpl _coreService;
   private final SenseiCore _core;
-  public LocalQueryOnlySenseiServiceImpl(File idxDir) throws Exception{
+
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  public LocalQueryOnlySenseiServiceImpl(File idxDir) throws Exception {
     ZoieConfig zoieConfig = new ZoieConfig();
     zoieConfig.setReadercachefactory(SimpleReaderCache.FACTORY);
-    DemoZoieSystemFactory zoieFactory = new DemoZoieSystemFactory(idxDir,new AbstractZoieIndexableInterpreter<JSONObject>(){
-      @Override
-      public ZoieIndexable convertAndInterpret(JSONObject src) {
-        return null;
-      }
-    },zoieConfig);
-    QueryParser queryParser = new QueryParser(Version.LUCENE_35,"contents", new StandardAnalyzer(Version.LUCENE_35));
-    DefaultJsonQueryBuilderFactory queryBuilderFactory = new DefaultJsonQueryBuilderFactory(queryParser);
-    _core = new SenseiCore(1,new int[]{0},zoieFactory,null,queryBuilderFactory, new DefaultFieldAccessorFactory(), zoieFactory.getDecorator());
-    _coreService = new CoreSenseiServiceImpl(_core);
+    DemoZoieSystemFactory zoieFactory = new DemoZoieSystemFactory(idxDir,
+        new AbstractZoieIndexableInterpreter<JSONObject>() {
+          @Override
+          public ZoieIndexable convertAndInterpret(JSONObject src) {
+            return null;
+          }
+        }, zoieConfig);
+    QueryParser queryParser = new QueryParser(Version.LUCENE_43, "contents", new StandardAnalyzer(
+        Version.LUCENE_43));
+    DefaultJsonQueryBuilderFactory queryBuilderFactory = new DefaultJsonQueryBuilderFactory(
+        queryParser);
+    _core = new SenseiCore(1, new int[] { 0 }, zoieFactory, null, queryBuilderFactory,
+        new DefaultFieldAccessorFactory(), zoieFactory.getDecorator());
+    _coreService = new CoreSenseiServiceImpl(_core, new MapConfiguration(new HashMap<String, Object>()));
     _core.start();
   }
-  
+
   @Override
   public SenseiResult doQuery(SenseiRequest req) throws SenseiException {
     return _coreService.execute(req);
@@ -57,7 +65,7 @@ public class LocalQueryOnlySenseiServiceImpl implements SenseiService {
     _core.shutdown();
   }
 
-  public static void main(String[] args) throws Exception{
+  public static void main(String[] args) throws Exception {
     File idxDir = new File("/tmp/sensei-example-cars/node1/shard0");
     SenseiService svc = new LocalQueryOnlySenseiServiceImpl(idxDir);
     SenseiResult res = svc.doQuery(new SenseiRequest());

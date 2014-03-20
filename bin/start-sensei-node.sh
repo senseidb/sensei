@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-#usage="Usage: start-sensei-node.sh <id> <port> <partitions> <conf-dir>"
-
-# if no args specified, show usage
-#if [ $# -le 3 ]; then
-#  echo $usage
-#  exit 1
-#fi
+usage="Usage: start-sensei-node.sh <conf-dir>"
+if [ $# -ne 1 ]; then
+   echo $usage
+  exit 1
+fi
 
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`

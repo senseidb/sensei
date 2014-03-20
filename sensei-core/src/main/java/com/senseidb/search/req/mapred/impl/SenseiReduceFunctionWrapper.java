@@ -14,53 +14,58 @@ import com.senseidb.search.req.mapred.SenseiMapReduce;
  *
  */
 public class SenseiReduceFunctionWrapper {
- 
+
   /**
    * Combine callback
    * @param mapReduceFunction
    * @param results
    * @return
    */
-  public static MapReduceResult combine(SenseiMapReduce mapReduceFunction, List<MapReduceResult> results) {
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  public static MapReduceResult combine(SenseiMapReduce<?, ?> mapReduceFunction,
+      List<MapReduceResult> results) {
     MapReduceResult ret = null;
     if (results.isEmpty()) {
       return null;
     }
-    ret =  results.get(0);
+    ret = results.get(0);
     for (int i = 1; i < results.size(); i++) {
       ret.getMapResults().addAll(results.get(i).getMapResults());
     }
-    ret.setMapResults(new ArrayList(mapReduceFunction.combine(ret.getMapResults(), CombinerStage.nodeLevel)));
+    ret.setMapResults(new ArrayList(mapReduceFunction.combine(ret.getMapResults(),
+      CombinerStage.nodeLevel)));
     return ret;
   }
- 
-  
+
   /** Reduce callback
    * @param mapReduceFunction
    * @param results
    * @return
    */
-  public static MapReduceResult reduce(SenseiMapReduce mapReduceFunction, List<MapReduceResult> results) {
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  public static MapReduceResult reduce(SenseiMapReduce mapReduceFunction,
+      List<MapReduceResult> results) {
     MapReduceResult ret = null;
     if (results.isEmpty()) {
       return ret;
     }
-    ret =  results.get(0);
+    ret = results.get(0);
     for (int i = 1; i < results.size(); i++) {
       ret.getMapResults().addAll(results.get(i).getMapResults());
-    }    
-    ret.setReduceResult(mapReduceFunction.reduce(ret.getMapResults())) ;
+    }
+    ret.setReduceResult(mapReduceFunction.reduce(ret.getMapResults()));
     ret.setMapResults(null);
     return ret;
   }
+
   public static List<MapReduceResult> extractMapReduceResults(Collection<SenseiResult> senseiResults) {
     List<MapReduceResult> ret = new ArrayList<MapReduceResult>(senseiResults.size());
     for (SenseiResult senseiResult : senseiResults) {
-      if (senseiResult.getMapReduceResult()!= null) {
+      if (senseiResult.getMapReduceResult() != null) {
         ret.add(senseiResult.getMapReduceResult());
       }
     }
     return ret;
   }
-  
+
 }

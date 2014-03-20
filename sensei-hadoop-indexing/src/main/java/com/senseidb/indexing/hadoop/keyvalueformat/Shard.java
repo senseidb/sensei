@@ -36,10 +36,11 @@ import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
  * of the entire index. Directory is the directory where this shard resides in.
  * Generation is the Lucene index's generation. Version and generation are
  * reserved for future use.
- * 
+ *
  * Note: Currently the version number of the entire index is not used and
  * defaults to -1.
  */
+@SuppressWarnings("rawtypes")
 public class Shard implements WritableComparable {
 
   // This method is copied from Path.
@@ -56,8 +57,7 @@ public class Shard implements WritableComparable {
     return path;
   }
 
-  public static void setIndexShards(Configuration conf,
-      Shard[] shards) {
+  public static void setIndexShards(Configuration conf, Shard[] shards) {
     StringBuilder shardsString = new StringBuilder(shards[0].toString());
     for (int i = 1; i < shards.length; i++) {
       shardsString.append(",");
@@ -69,8 +69,7 @@ public class Shard implements WritableComparable {
   public static Shard[] getIndexShards(Configuration conf) {
     String shards = conf.get(SenseiJobConfig.INDEX_SHARDS);
     if (shards != null) {
-      ArrayList<Object> list =
-          Collections.list(new StringTokenizer(shards, ","));
+      ArrayList<Object> list = Collections.list(new StringTokenizer(shards, ","));
       Shard[] result = new Shard[list.size()];
       for (int i = 0; i < list.size(); i++) {
         result[i] = Shard.createShardFromString((String) list.get(i));
@@ -153,35 +152,41 @@ public class Shard implements WritableComparable {
     return gen;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
+  @Override
   public String toString() {
     return version + "@" + dir + "@" + gen;
   }
-  
-  public String toFlatString(){
-	  String dirPath = dir.replace("/", "_");
-	  String flatString = version + "_" + dirPath + "_" + gen;
-	  flatString = flatString.replace("@", "_");
-	  return flatString;
+
+  public String toFlatString() {
+    String dirPath = dir.replace("/", "_");
+    String flatString = version + "_" + dirPath + "_" + gen;
+    flatString = flatString.replace("@", "_");
+    return flatString;
   }
 
   // ///////////////////////////////////
   // Writable
   // ///////////////////////////////////
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
    */
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeLong(version);
     Text.writeString(out, dir);
     out.writeLong(gen);
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     version = in.readLong();
     dir = Text.readString(in);
@@ -191,9 +196,11 @@ public class Shard implements WritableComparable {
   // ///////////////////////////////////
   // Comparable
   // ///////////////////////////////////
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Comparable#compareTo(java.lang.Object)
    */
+  @Override
   public int compareTo(Object o) {
     return compareTo((Shard) o);
   }
@@ -225,9 +232,11 @@ public class Shard implements WritableComparable {
     }
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#equals(java.lang.Object)
    */
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -236,13 +245,14 @@ public class Shard implements WritableComparable {
       return false;
     }
     Shard other = (Shard) o;
-    return version == other.version && dir.equals(other.dir)
-        && gen == other.gen;
+    return version == other.version && dir.equals(other.dir) && gen == other.gen;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#hashCode()
    */
+  @Override
   public int hashCode() {
     return (int) version ^ dir.hashCode() ^ (int) gen;
   }

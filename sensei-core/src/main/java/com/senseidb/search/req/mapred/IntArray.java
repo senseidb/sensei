@@ -6,5 +6,6 @@ package com.senseidb.search.req.mapred;
  */
 public interface IntArray {
   public int size();
+
   public int get(int index);
 }

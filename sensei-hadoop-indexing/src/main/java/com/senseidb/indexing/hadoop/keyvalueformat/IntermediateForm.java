@@ -25,13 +25,14 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.miscellaneous.LimitTokenCountAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriter.MaxFieldLength;
+import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.KeepOnlyLastCommitDeletionPolicy;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
-import org.apache.lucene.store.RAMDirectorySerializer;
+import org.apache.lucene.util.Version;
 
 import com.senseidb.indexing.hadoop.reduce.RAMDirectoryUtil;
 import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
@@ -40,7 +41,7 @@ import com.senseidb.indexing.hadoop.util.SenseiJobConfig;
  * An intermediate form for one or more parsed Lucene documents and/or
  * delete terms. It actually uses Lucene file format as the format for
  * the intermediate form by using RAM dir files.
- * 
+ *
  * Note: If process(*) is ever called, closeWriter() should be called.
  * Otherwise, no need to call closeWriter().
  */
@@ -50,6 +51,7 @@ public class IntermediateForm implements Writable {
   private RAMDirectory dir;
   private IndexWriter writer;
   private int numDocs;
+  private int maxFieldLength;
 
   /**
    * Constructor
@@ -77,7 +79,6 @@ public class IntermediateForm implements Writable {
     return dir;
   }
 
-
   /**
    * This method is used by the index update mapper and process a document
    * operation into the current intermediate form.
@@ -87,14 +88,17 @@ public class IntermediateForm implements Writable {
    */
   public void process(Document doc, Analyzer analyzer) throws IOException {
 
+    if (writer == null) {
+      // analyzer is null because we specify an analyzer with addDocument
+      writer = createWriter();
+    }
 
-      if (writer == null) {
-        // analyzer is null because we specify an analyzer with addDocument
-        writer = createWriter();
-      }
-
+    if (maxFieldLength > 0) {
+      writer.addDocument(doc, new LimitTokenCountAnalyzer(analyzer, maxFieldLength));
+    } else {
       writer.addDocument(doc, analyzer);
-      numDocs++;
+    }
+    numDocs++;
 
   }
 
@@ -113,7 +117,7 @@ public class IntermediateForm implements Writable {
         writer = createWriter();
       }
 
-      writer.addIndexesNoOptimize(new Directory[] { form.dir });
+      writer.addIndexes(new Directory[] { form.dir });
       numDocs++;
     }
 
@@ -127,7 +131,7 @@ public class IntermediateForm implements Writable {
    */
   public void closeWriter() throws IOException {
     if (writer != null) {
-      writer.optimize();
+      writer.forceMerge(1);
       writer.close();
       writer = null;
     }
@@ -146,9 +150,11 @@ public class IntermediateForm implements Writable {
     return size;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
+  @Override
   public String toString() {
     StringBuilder buffer = new StringBuilder();
     buffer.append(this.getClass().getSimpleName());
@@ -160,19 +166,13 @@ public class IntermediateForm implements Writable {
   }
 
   private IndexWriter createWriter() throws IOException {
-    IndexWriter writer =
-//        new IndexWriter(dir, false, null, new KeepOnlyLastCommitDeletionPolicy());
-    	new IndexWriter(dir,  null, new KeepOnlyLastCommitDeletionPolicy(), MaxFieldLength.UNLIMITED);
-    writer.setUseCompoundFile(true);  //use compound file fortmat to speed up;
-
+    IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_43, null);
+    config.setIndexDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+    IndexWriter idxWriter = new IndexWriter(dir, config);
     if (conf != null) {
-      int maxFieldLength = conf.getInt(SenseiJobConfig.MAX_FIELD_LENGTH, -1);
-      if (maxFieldLength > 0) {
-        writer.setMaxFieldLength(maxFieldLength);
-      }
+      maxFieldLength = conf.getInt(SenseiJobConfig.MAX_FIELD_LENGTH, -1);
     }
-
-    return writer;
+    return idxWriter;
   }
 
   private void resetForm() throws IOException {
@@ -190,26 +190,23 @@ public class IntermediateForm implements Writable {
   // Writable
   // ///////////////////////////////////
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.hadoop.io.Writable#write(java.io.DataOutput)
    */
+  @Override
   public void write(DataOutput out) throws IOException {
-
     String[] files = dir.listAll();
     RAMDirectoryUtil.writeRAMFiles(out, dir, files);
-    
-//    RAMDirectorySerializer.toDataOutput(out, dir);
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.hadoop.io.Writable#readFields(java.io.DataInput)
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     resetForm();
     RAMDirectoryUtil.readRAMFiles(in, dir);
-
-//	  numDocs = 0;
-//	  dir = RAMDirectorySerializer.fromDataInput(in);
   }
-
 }

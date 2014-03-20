@@ -17,10 +17,11 @@ import com.senseidb.search.client.json.CustomJsonHandler;
  *
  *
  */
+@SuppressWarnings("unused")
 @CustomJsonHandler(QueryJsonHandler.class)
 public class QueryWildcard extends FieldAwareQuery {
-  private String value;
-  private double boost;
+  private final String value;
+  private final double boost;
 
   public QueryWildcard(String field, String value, double boost) {
     super();

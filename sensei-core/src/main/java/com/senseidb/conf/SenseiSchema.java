@@ -15,52 +15,39 @@ import java.util.Set;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.log4j.Logger;
-import org.apache.lucene.document.Field.Index;
 import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.Field.TermVector;
+import org.apache.lucene.document.FieldType;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 
 import com.senseidb.indexing.DefaultSenseiInterpreter;
-import com.senseidb.indexing.DefaultSenseiInterpreter.IndexSpec;
 import com.senseidb.indexing.MetaType;
 
 public class SenseiSchema {
-  public static final String SRC_DATA_FIELD_NAME            = "__SRC_DATA__";
-  public static final String SRC_DATA_COMPRESSED_FIELD_NAME = "stored";
-
-  public static final String EVENT_TYPE_FIELD  = "type";
-  public static final String EVENT_FIELD       = "data";
-  public static final String EVENT_TYPE_ADD    = "add";
+  public static final String EVENT_TYPE_FIELD = "type";
   public static final String EVENT_TYPE_UPDATE = "update";
   public static final String EVENT_TYPE_DELETE = "delete";
-  public static final String EVENT_TYPE_SKIP   = "skip";
+  public static final String EVENT_TYPE_SKIP = "skip";
 
   private static Logger logger = Logger.getLogger(SenseiSchema.class);
 
   private String _uidField;
-  private String _deleteField;
-  private String _skipField;
-  private String _srcDataStore;
   private String _srcDataField;
   private boolean _compressSrcData;
-  private List<FacetDefinition> facets = new ArrayList<FacetDefinition>();
+  private final List<FacetDefinition> facets = new ArrayList<FacetDefinition>();
 
   public static class FieldDefinition {
     public Format formatter;
     public boolean isMeta;
-    public IndexSpec textIndexSpec;
+    public FieldType fieldType;
     public String fromField;
     public boolean isMulti;
     public boolean isActivity;
     public String delim = ",";
     public Store store;
-    public Class type = null;
-		public String name;
+    public Class<?> type = null;
+    public String name;
   }
 
   public static class FacetDefinition {
@@ -68,15 +55,16 @@ public class SenseiSchema {
     public String type;
     public String column;
     public Boolean dynamic;
-    public Map<String,List<String>> params;
+    public Map<String, List<String>> params;
     public Set<String> dependSet = new HashSet<String>();
+
     public static FacetDefinition valueOf(JSONObject facet) {
       try {
         FacetDefinition ret = new FacetDefinition();
         ret.name = facet.getString("name");
         ret.type = facet.getString("type");
-        ret.column = facet.optString("column",ret.name);
-        JSONArray depends= facet.optJSONArray("depends");
+        ret.column = facet.optString("column", ret.name);
+        JSONArray depends = facet.optJSONArray("depends");
         if (depends != null) {
           for (int i = 0; i < depends.length(); ++i) {
             String dep = depends.getString(i).trim();
@@ -95,308 +83,210 @@ public class SenseiSchema {
     }
   }
 
-  private SenseiSchema(){
+  private SenseiSchema() {
   }
-	
-	public String getUidField(){
-		return _uidField;
-	}
 
+  public String getUidField() {
+    return _uidField;
+  }
 
-	public String getDeleteField(){
-		return _deleteField;
-	}
-	
-	public String getSkipField(){
-		return _skipField;
-	}
+  public String getSrcDataField() {
+    return _srcDataField;
+  }
 
-	public String getSrcDataField(){
-		return _srcDataField;
-	}
+  public boolean isCompressSrcData() {
+    return _compressSrcData;
+  }
 
-	public String getSrcDataStore(){
-		return _srcDataStore;
-	}
-
-	public boolean isCompressSrcData(){
-		return _compressSrcData;
-	}
-	
-	public void setCompressSrcData(boolean _compressSrcData) {
+  public void setCompressSrcData(boolean _compressSrcData) {
     this._compressSrcData = _compressSrcData;
   }
 
-  public Map<String,FieldDefinition> getFieldDefMap(){
-		return _fieldDefMap;
-	}
-	
-	private Map<String,FieldDefinition> _fieldDefMap;
+  public Map<String, FieldDefinition> getFieldDefMap() {
+    return _fieldDefMap;
+  }
+
+  private Map<String, FieldDefinition> _fieldDefMap;
   private static JSONObject schemaObj;
-	
-	public static SenseiSchema build(JSONObject schemaObj) throws JSONException,ConfigurationException{
-	  
-	 
+
+  public static SenseiSchema build(JSONObject schemaObj) throws JSONException,
+      ConfigurationException {
+
     SenseiSchema schema = new SenseiSchema();
     schema.setSchemaObj(schemaObj);
-      schema._fieldDefMap = new HashMap<String,FieldDefinition>();
-      JSONObject tableElem = schemaObj.optJSONObject("table");
-      if (tableElem==null){
-          throw new ConfigurationException("empty schema");
-      }
-      
-      schema._uidField = tableElem.getString("uid");
-      schema._deleteField = tableElem.optString("delete-field","");
-      schema._skipField = tableElem.optString("skip-field","");
-      schema._srcDataStore = tableElem.optString("src-data-store","");
-      schema._srcDataField = tableElem.optString("src-data-field","src_data");
-      schema._compressSrcData = tableElem.optBoolean("compress-src-data",true);
-      
-      JSONArray columns = tableElem.optJSONArray("columns");
+    schema._fieldDefMap = new HashMap<String, FieldDefinition>();
+    JSONObject tableElem = schemaObj.optJSONObject("table");
+    if (tableElem == null) {
+      throw new ConfigurationException("empty schema");
+    }
 
-      int count = 0;
-      if (columns!=null){
-         count = columns.length();
-      }
-    
-      for (int i = 0; i < count; ++i) {
+    schema._uidField = tableElem.getString("uid");
+    schema._srcDataField = tableElem.optString("src-data-field", "src_data");
+    schema._compressSrcData = tableElem.optBoolean("compress-src-data", true);
 
-        JSONObject column = columns.getJSONObject(i);  
-        try {
-              String n = column.getString("name");
-              String t = column.getString("type");
-              String frm = column.optString("from", "");
-              String storeString = column.optString("store", "");
+    JSONArray columns = tableElem.optJSONArray("columns");
 
-              FieldDefinition fdef = new FieldDefinition();
-              fdef.formatter = null;
-              fdef.fromField = frm.length() > 0 ? frm : n;
-              fdef.store = storeString.length() > 0 ? DefaultSenseiInterpreter.STORE_VAL_MAP.get(storeString.toUpperCase()) : Store.NO;
-              if (fdef.store == null) {
-                throw new ConfigurationException("Invalid indexing parameter specification");
-              }
-              fdef.isMeta = true;
-              
-              fdef.isMulti = column.optBoolean("multi");
-              fdef.isActivity = column.optBoolean("activity");
-              fdef.name = n;
-              String delimString = column.optString("delimiter");
-              if (delimString!=null && delimString.trim().length()>0){
-                  fdef.delim = delimString;
-              }
-              
-              schema._fieldDefMap.put(n, fdef);
-              
-              if (t.equals("int")) {
-                  MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(int.class);
-                  String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-                  fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-                  fdef.type = int.class;
-              } else if (t.equals("short")) {
-                  MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(short.class);
-                  String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-                  fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-                  fdef.type = int.class;
-              } else if (t.equals("long")) {
-                  MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(long.class);
-                  String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-                  fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-                  fdef.type = long.class;
-              } else if (t.equals("float")) {
-                  MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(float.class);
-                  String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-                  fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-                  fdef.type = double.class;
-              } else if (t.equals("double")) {
-                  MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(double.class);
-                  String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-                  fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-                  fdef.type = double.class;
-              } else if (t.equals("char")) {
-                  fdef.formatter = null;
-              } else if (t.equals("string")) {
-                  fdef.formatter = null;
-              } else if (t.equals("boolean")) {
-                  fdef.formatter = null;
-              } else if (t.equals("date")) {
+    int count = 0;
+    if (columns != null) {
+      count = columns.length();
+    }
 
-                  String f = "";
-                  try {
-                      f = column.optString("format");
-                  } catch (Exception ex) {
-                      logger.error(ex.getMessage(), ex);
-                  }
-                  if (f.isEmpty())
-                      throw new ConfigurationException("Date format cannot be empty.");
+    for (int i = 0; i < count; ++i) {
 
-                  fdef.formatter = new SimpleDateFormat(f);
-                  fdef.type = Date.class;
-              }
-              else if (t.equals("text")){
-                  fdef.isMeta = false;
-                  String idxString = column.optString("index", "");
-                  String tvString = column.optString("termvector", "");
-                  Index idx = idxString.length() == 0? Index.ANALYZED : DefaultSenseiInterpreter.INDEX_VAL_MAP.get(idxString.toUpperCase());
-                  TermVector tv = tvString.length() == 0? TermVector.NO : DefaultSenseiInterpreter.TV_VAL_MAP.get(tvString.toUpperCase());
-                  
-                  if (idx==null || tv==null || fdef.store==null){
-                    throw new ConfigurationException("Invalid indexing parameter specification");
-                  }
-                  IndexSpec indexingSpec = new IndexSpec();
-                  indexingSpec.store = fdef.store;
-                  indexingSpec.index = idx;
-                  indexingSpec.tv = tv;
+      JSONObject column = columns.getJSONObject(i);
+      try {
+        String n = column.getString("name");
+        String t = column.getString("type");
+        String frm = column.optString("from", "");
+        String storeString = column.optString("store", "NO");
+        storeString = storeString.toUpperCase();
 
-                  fdef.textIndexSpec = indexingSpec; 
-              }
-              
-          } catch (Exception e) {
-              throw new ConfigurationException("Error parsing schema: "
-                      + column, e);
+        FieldDefinition fdef = new FieldDefinition();
+        fdef.formatter = null;
+        fdef.fromField = frm.length() > 0 ? frm : n;
+        if (storeString.equals("NO")) {
+          fdef.store = Store.NO;
+        } else if (storeString.equals("YES")) {
+          fdef.store = Store.YES;
+        } else {
+          throw new ConfigurationException("Invalid indexing parameter specification");
+        }
+        fdef.isMeta = true;
+
+        fdef.isMulti = column.optBoolean("multi");
+        fdef.isActivity = column.optBoolean("activity");
+        fdef.name = n;
+        String delimString = column.optString("delimiter");
+        if (delimString != null && delimString.trim().length() > 0) {
+          fdef.delim = delimString;
+        }
+
+        schema._fieldDefMap.put(n, fdef);
+
+        if (t.equals("int")) {
+          MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(int.class);
+          String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
+          fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
+          fdef.type = int.class;
+        } else if (t.equals("short")) {
+          MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(short.class);
+          String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
+          fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
+          fdef.type = int.class;
+        } else if (t.equals("long")) {
+          MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(long.class);
+          String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
+          fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
+          fdef.type = long.class;
+        } else if (t.equals("float")) {
+          MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(float.class);
+          String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
+          fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
+          fdef.type = double.class;
+        } else if (t.equals("double")) {
+          MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(double.class);
+          String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
+          fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
+          fdef.type = double.class;
+        } else if (t.equals("char")) {
+          fdef.formatter = null;
+          fdef.type = char.class;
+        } else if (t.equals("string")) {
+          fdef.formatter = null;
+          fdef.type = String.class;
+        } else if (t.equals("boolean")) {
+          fdef.formatter = null;
+          fdef.type = boolean.class;
+        } else if (t.equals("date")) {
+          String f = "";
+          try {
+            f = column.optString("format");
+          } catch (Exception ex) {
+            logger.error(ex.getMessage(), ex);
           }
-      }
-      JSONArray facetsList = schemaObj.optJSONArray("facets");
-      if (facetsList != null) {
-        for (int i = 0; i < facetsList.length(); i++) {
-          JSONObject facet = facetsList.optJSONObject(i);
-          if (facet != null) {
-            schema.facets.add(FacetDefinition.valueOf(facet));
+          if (f.isEmpty()) throw new ConfigurationException("Date format cannot be empty.");
+
+          fdef.formatter = new SimpleDateFormat(f);
+          fdef.type = Date.class;
+        } else if (t.equals("text")) {
+          fdef.isMeta = false;
+          FieldType fieldType = new FieldType();
+          String idxString = column.optString("index", "ANALYZED");
+          idxString = idxString.toUpperCase();
+          if (idxString.equals("NO")) {
+            fieldType.setIndexed(false);
+            fieldType.setTokenized(false);
+            fieldType.setOmitNorms(true);
+          } else if (idxString.equals("ANALYZED") || idxString.equals("TOKENIZED")) {
+            fieldType.setIndexed(true);
+            fieldType.setTokenized(true);
+            fieldType.setOmitNorms(false);
+          } else if (idxString.equals("NOT_ANALYZED") || idxString.equals("UN_TOKENIZED")) {
+            fieldType.setIndexed(true);
+            fieldType.setTokenized(false);
+            fieldType.setOmitNorms(false);
+          } else if (idxString.equals("NOT_ANALYZED_NO_NORMS") || idxString.equals("NO_NORMS")) {
+            fieldType.setIndexed(true);
+            fieldType.setTokenized(false);
+            fieldType.setOmitNorms(true);
+          } else if (idxString.equals("ANALYZED_NO_NORMS")) {
+            fieldType.setIndexed(true);
+            fieldType.setTokenized(true);
+            fieldType.setOmitNorms(true);
+          } else {
+            throw new ConfigurationException("Invalid indexing parameter specification");
           }
+
+          if (storeString.equals("NO")) {
+            fieldType.setStored(false);
+          } else if (storeString.equals("YES")) {
+            fieldType.setStored(true);
+          } else {
+            throw new ConfigurationException("Invalid indexing parameter specification");
+          }
+
+          String tvString = column.optString("termvector", "NO");
+          tvString = tvString.toUpperCase();
+          if (tvString.equals("NO")) {
+            fieldType.setStoreTermVectors(false);
+            fieldType.setStoreTermVectorOffsets(false);
+            fieldType.setStoreTermVectorPositions(false);
+          } else if (tvString.equals("YES")) {
+            fieldType.setStoreTermVectors(true);
+            fieldType.setStoreTermVectorOffsets(false);
+            fieldType.setStoreTermVectorPositions(false);
+          } else if (tvString.equals("WITH_POSITIONS")) {
+            fieldType.setStoreTermVectors(true);
+            fieldType.setStoreTermVectorOffsets(false);
+            fieldType.setStoreTermVectorPositions(true);
+          } else if (tvString.equals("WITH_OFFSETS")) {
+            fieldType.setStoreTermVectors(true);
+            fieldType.setStoreTermVectorOffsets(true);
+            fieldType.setStoreTermVectorPositions(false);
+          } else if (tvString.equals("WITH_POSITIONS_OFFSETS")) {
+            fieldType.setStoreTermVectors(true);
+            fieldType.setStoreTermVectorOffsets(true);
+            fieldType.setStoreTermVectorPositions(true);
+          } else {
+            throw new ConfigurationException("Invalid indexing parameter specification");
+          }
+          fdef.fieldType = fieldType;
+        }
+      } catch (Exception e) {
+        throw new ConfigurationException("Error parsing schema: " + column, e);
+      }
+    }
+    JSONArray facetsList = schemaObj.optJSONArray("facets");
+    if (facetsList != null) {
+      for (int i = 0; i < facetsList.length(); i++) {
+        JSONObject facet = facetsList.optJSONObject(i);
+        if (facet != null) {
+          schema.facets.add(FacetDefinition.valueOf(facet));
         }
       }
-      return schema;
-	}
-	@Deprecated
-	public static SenseiSchema build(Document schemaDoc) throws ConfigurationException{
-		SenseiSchema schema = new SenseiSchema();
-		schema._fieldDefMap = new HashMap<String,FieldDefinition>();
-		NodeList tables = schemaDoc.getElementsByTagName("table");
-		if (tables==null || tables.getLength()==0){
-			throw new ConfigurationException("empty schema");
-		}
-		if (tables.getLength()>1){
-			throw new ConfigurationException("multiple schemas not supported");
-		}
-		
-		Element tableElem = (Element) tables.item(0);
-		schema._uidField = tableElem.getAttribute("uid");
-		schema._deleteField = tableElem.getAttribute("delete-field");
-		if (schema._deleteField==null) schema._deleteField="";
-		schema._skipField = tableElem.getAttribute("skip-field");
-		if (schema._skipField==null) schema._skipField="";
-		schema._srcDataStore = tableElem.getAttribute("src-data-store");
-		if (schema._srcDataStore==null) schema._srcDataStore="";
-		schema._srcDataField = tableElem.getAttribute("src-data-field");
-		if (schema._srcDataField==null || schema._srcDataField.length() == 0) schema._srcDataField="src_data";
-    schema._compressSrcData = true;
-    String compress = tableElem.getAttribute("compress-src-data");
-    if (compress != null && "false".equals(compress))
-      schema._compressSrcData = false;
-		
-		NodeList columns = tableElem.getElementsByTagName("column");
-		for (int i = 0; i < columns.getLength(); ++i) {
-			try {
-				Element column = (Element) columns.item(i);
-				String n = column.getAttribute("name");
-				String t = column.getAttribute("type");
-				String frm = column.getAttribute("from");
-				
-				FieldDefinition fdef = new FieldDefinition();
-				fdef.formatter = null;
-				fdef.fromField = frm.length() > 0 ? frm : n;
-
-				fdef.isMeta = true;
-				
-				fdef.isMulti = false;
-				
-				String isMultiString = column.getAttribute("multi");
-				if (isMultiString!=null && isMultiString.trim().length()>0){
-					fdef.isMulti = Boolean.parseBoolean(isMultiString);
-				}
-				String isActivityString = column.getAttribute("activity");
-        if (isActivityString!=null && isActivityString.trim().length()>0){
-          fdef.isActivity = Boolean.parseBoolean(isActivityString);
-        }
-				String delimString = column.getAttribute("delimiter");
-				if (delimString!=null && delimString.trim().length()>0){
-					fdef.delim = delimString;
-				}
-				
-				schema._fieldDefMap.put(n, fdef);
-				
-				if (t.equals("int")) {
-					MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(int.class);
-					String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-					fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-					fdef.type = int.class;
-				} else if (t.equals("short")) {
-					MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(short.class);
-					String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-					fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-					fdef.type = int.class;
-				} else if (t.equals("long")) {
-					MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(long.class);
-					String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-					fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-					fdef.type = long.class;
-				} else if (t.equals("float")) {
-					MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(float.class);
-					String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-					fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-					fdef.type = double.class;
-				} else if (t.equals("double")) {
-					MetaType metaType = DefaultSenseiInterpreter.CLASS_METATYPE_MAP.get(double.class);
-					String formatString = DefaultSenseiInterpreter.DEFAULT_FORMAT_STRING_MAP.get(metaType);
-					fdef.formatter = new DecimalFormat(formatString, new DecimalFormatSymbols(Locale.US));
-					fdef.type = double.class;
-				} else if (t.equals("char")) {
-					fdef.formatter = null;
-				} else if (t.equals("string")) {
-					fdef.formatter = null;
-				} else if (t.equals("boolean")) {
-					fdef.formatter = null;
-				} else if (t.equals("date")) {
-
-					String f = "";
-					try {
-						f = column.getAttribute("format");
-					} catch (Exception ex) {
-						logger.error(ex.getMessage(), ex);
-					}
-					if (f.isEmpty())
-						throw new ConfigurationException("Date format cannot be empty.");
-
-					fdef.formatter = new SimpleDateFormat(f);
-					fdef.type = Date.class;
-				}
-				else if (t.equals("text")){
-					fdef.isMeta = false;
-					String idxString = column.getAttribute("index");
-					String storeString = column.getAttribute("store");
-					String tvString = column.getAttribute("termvector");
-					Index idx = idxString == null ? Index.ANALYZED : DefaultSenseiInterpreter.INDEX_VAL_MAP.get(idxString.toUpperCase());
-					Store store = storeString == null ? Store.NO : DefaultSenseiInterpreter.STORE_VAL_MAP.get(storeString.toUpperCase());
-					TermVector tv = tvString == null ? TermVector.NO : DefaultSenseiInterpreter.TV_VAL_MAP.get(tvString.toUpperCase());
-					
-					if (idx==null || store==null || tv==null){
-					  throw new ConfigurationException("Invalid indexing parameter specification");
-					}
-					
-					IndexSpec indexingSpec = new IndexSpec();
-					indexingSpec.store = store;
-					indexingSpec.index = idx;
-					indexingSpec.tv = tv;
-
-					fdef.textIndexSpec = indexingSpec; 
-				}
-
-			} catch (Exception e) {
-				throw new ConfigurationException("Error parsing schema: "
-						+ columns.item(i), e);
-			}
-		}
-		return schema;
-	}
+    }
+    return schema;
+  }
 
   public List<FacetDefinition> getFacets() {
     return facets;
@@ -409,5 +299,5 @@ public class SenseiSchema {
   public void setSchemaObj(JSONObject schemaObj) {
     SenseiSchema.schemaObj = schemaObj;
   }
-	
+
 }

@@ -18,65 +18,70 @@ import com.browseengine.bobo.facets.FacetCountCollector;
  *
  */
 public class FacetCountAccessor {
-    private Map<String, FacetCountCollector> facetCountCollectors = new HashMap<String, FacetCountCollector>();;
-    public FacetCountAccessor(FacetCountCollector[] facetCountCollectors) {
-      if (facetCountCollectors != null) {
-        for (FacetCountCollector facetCountCollector : facetCountCollectors) {
-          this.facetCountCollectors.put(facetCountCollector.getName(), facetCountCollector);
-        }
+  private Map<String, FacetCountCollector> facetCountCollectors = new HashMap<String, FacetCountCollector>();;
+
+  public FacetCountAccessor(FacetCountCollector[] facetCountCollectors) {
+    if (facetCountCollectors != null) {
+      for (FacetCountCollector facetCountCollector : facetCountCollectors) {
+        this.facetCountCollectors.put(facetCountCollector.getName(), facetCountCollector);
       }
     }
-    
-    /**
-     * @return true if facets are in the request and the map method is called at the end of the Lucene segment
-     */
-    public boolean areFacetCountsPresent() {
-      return !facetCountCollectors.isEmpty();
+  }
+
+  /**
+   * @return true if facets are in the request and the map method is called at the end of the Lucene segment
+   */
+  public boolean areFacetCountsPresent() {
+    return !facetCountCollectors.isEmpty();
+  }
+
+  /**
+   * @param facetName
+   * @param value
+   * @return facet count or -1 if facet doesn't exist or facet value can not be found
+   */
+  public int getFacetCount(String facetName, Object value) {
+    if (!facetCountCollectors.containsKey(facetName)) {
+      return -1;
     }
-    
-   
-    /**
-     * @param facetName
-     * @param value
-     * @return facet count or -1 if facet doesn't exist or facet value can not be found
-     */
-    public int getFacetCount(String facetName, Object value) {
-      if (!facetCountCollectors.containsKey(facetName)) {
-        return -1;
-      }
-      return facetCountCollectors.get(facetName).getFacetHitsCount(value);
+    return facetCountCollectors.get(facetName).getFacetHitsCount(value);
+  }
+
+  /**
+   * @param facetName
+   * @param value
+   * @return facet count or -1 if facet doesn't exist or facet value can not be found
+   */
+  public int getFacetCount(String facetName, String value) {
+    if (!facetCountCollectors.containsKey(facetName)) {
+      return -1;
     }
-    /**
-     * @param facetName
-     * @param value
-     * @return facet count or -1 if facet doesn't exist or facet value can not be found
-     */
-    public int getFacetCount(String facetName, String value) {
-      if (!facetCountCollectors.containsKey(facetName)) {
-        return -1;
-      }
-      return facetCountCollectors.get(facetName).getFacet(value).getFacetValueHitCount();
+    return facetCountCollectors.get(facetName).getFacet(value).getFacetValueHitCount();
+  }
+
+  /**
+   * @param facetName
+   * @param valIndex
+   * @return facet count or -1 if facet doesn't exist or facet value can not be found
+   */
+  public int getFacetCount(String facetName, int valIndex) {
+    if (!facetCountCollectors.containsKey(facetName)) {
+      return -1;
     }
-    /**
-     * @param facetName
-     * @param valIndex
-     * @return facet count or -1 if facet doesn't exist or facet value can not be found
-     */
-    public int  getFacetCount(String facetName, int valIndex) {
-      if (!facetCountCollectors.containsKey(facetName)) {
-        return -1;
-      }
-      return facetCountCollectors.get(facetName).getCountDistribution().get(valIndex);
-    }
-    /**Returns the Bobo specific class that is responsible for facet counting
-     * @param facetName
-     * @return 
-     */
-    public FacetCountCollector getFacetCollector(String facetName) {      
-      return facetCountCollectors.get(facetName);
-    }
-    public Set<FacetCountCollector> getFacetCountCollectors() {
-      return new HashSet<FacetCountCollector>(facetCountCollectors.values());
-    }
-    public static final FacetCountAccessor EMPTY = new FacetCountAccessor(new FacetCountCollector[0]);
+    return facetCountCollectors.get(facetName).getCountDistribution().get(valIndex);
+  }
+
+  /**Returns the Bobo specific class that is responsible for facet counting
+   * @param facetName
+   * @return 
+   */
+  public FacetCountCollector getFacetCollector(String facetName) {
+    return facetCountCollectors.get(facetName);
+  }
+
+  public Set<FacetCountCollector> getFacetCountCollectors() {
+    return new HashSet<FacetCountCollector>(facetCountCollectors.values());
+  }
+
+  public static final FacetCountAccessor EMPTY = new FacetCountAccessor(new FacetCountCollector[0]);
 }

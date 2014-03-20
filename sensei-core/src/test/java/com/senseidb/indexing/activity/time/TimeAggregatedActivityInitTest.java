@@ -24,9 +24,12 @@ public class TimeAggregatedActivityInitTest {
     intValueHolders[1].activityIntValues.fieldValues[0] = 3;
     intValueHolders[2].activityIntValues.fieldValues[0] = 1;
     TimeAggregatedActivityValues.initTimeHits(timeHitsHolder, intValueHolders, 1, 10);
-    assertTrue(Arrays.equals(new int[] {1, 1, 1, 1, 1, 0, 0, 0, 0}, timeHitsHolder.getActivities(0).array));
-    assertTrue(Arrays.equals(new int[] {1, 3, 6, 7, 10, 0, 0, 0, 0}, timeHitsHolder.getTimes(0).array));   
+    assertTrue(Arrays.equals(new int[] { 1, 1, 1, 1, 1, 0, 0, 0, 0 },
+      timeHitsHolder.getActivities(0).array));
+    assertTrue(Arrays.equals(new int[] { 1, 3, 6, 7, 10, 0, 0, 0, 0 },
+      timeHitsHolder.getTimes(0).array));
   }
+
   @Test
   public void test2ActivitiesMoreThanMinutes() {
     int capacity = 1;
@@ -39,9 +42,12 @@ public class TimeAggregatedActivityInitTest {
     intValueHolders[1].activityIntValues.fieldValues[0] = 10;
     intValueHolders[2].activityIntValues.fieldValues[0] = 1;
     TimeAggregatedActivityValues.initTimeHits(timeHitsHolder, intValueHolders, 1, 10);
-    assertTrue(Arrays.equals(new int[] {8, 8, 8, 8, 8, 3, 3, 3, 1, 0}, timeHitsHolder.getActivities(0).array));
-    assertTrue(Arrays.equals(new int[] {1, 2, 3, 4, 5, 6, 7, 8, 10, 0}, timeHitsHolder.getTimes(0).array));   
+    assertTrue(Arrays.equals(new int[] { 8, 8, 8, 8, 8, 3, 3, 3, 1, 0 },
+      timeHitsHolder.getActivities(0).array));
+    assertTrue(Arrays.equals(new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 10, 0 },
+      timeHitsHolder.getTimes(0).array));
   }
+
   @Test
   public void test3SingleActivities() {
     int capacity = 1;
@@ -53,8 +59,10 @@ public class TimeAggregatedActivityInitTest {
     intValueHolders[0].activityIntValues.fieldValues[0] = 50;
     intValueHolders[1].activityIntValues.fieldValues[0] = 10;
     intValueHolders[2].activityIntValues.fieldValues[0] = 1;
-    TimeAggregatedActivityValues.initTimeHits(timeHitsHolder, intValueHolders, 1, 10);    
-    assertTrue(Arrays.toString( timeHitsHolder.getActivities(0).array), Arrays.equals(new int[] {1}, timeHitsHolder.getActivities(0).array));
-    assertTrue(Arrays.toString( timeHitsHolder.getTimes(0).array), Arrays.equals(new int[] {10}, timeHitsHolder.getTimes(0).array));   
+    TimeAggregatedActivityValues.initTimeHits(timeHitsHolder, intValueHolders, 1, 10);
+    assertTrue(Arrays.toString(timeHitsHolder.getActivities(0).array),
+      Arrays.equals(new int[] { 1 }, timeHitsHolder.getActivities(0).array));
+    assertTrue(Arrays.toString(timeHitsHolder.getTimes(0).array),
+      Arrays.equals(new int[] { 10 }, timeHitsHolder.getTimes(0).array));
   }
 }

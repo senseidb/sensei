@@ -17,52 +17,39 @@ import org.w3c.dom.NodeList;
 import com.senseidb.util.JSONUtil.FastJSONArray;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
-public class SchemaConverter
-{
+public class SchemaConverter {
   private static Logger logger = Logger.getLogger(SchemaConverter.class);
 
-  static public JSONObject convert(Document schemaDoc)
-      throws ConfigurationException, JSONException
-  {
+  static public JSONObject convert(Document schemaDoc) throws ConfigurationException, JSONException {
     JSONObject jsonObj = new FastJSONObject();
     JSONObject tableObj = new FastJSONObject();
     jsonObj.put("table", tableObj);
 
     NodeList tables = schemaDoc.getElementsByTagName("table");
-    if (tables != null && tables.getLength() > 0)
-    {
+    if (tables != null && tables.getLength() > 0) {
       Element tableElem = (Element) tables.item(0);
       tableObj.put("uid", tableElem.getAttribute("uid"));
       String deleteField = tableElem.getAttribute("delete-field");
-      if (deleteField != null && deleteField.length() > 0)
-        tableObj.put("delete-field", deleteField);
+      if (deleteField != null && deleteField.length() > 0) tableObj
+          .put("delete-field", deleteField);
 
       String skipField = tableElem.getAttribute("skip-field");
-      if (skipField != null && skipField.length() > 0)
-        tableObj.put("skip-field", skipField);
-
-      String srcDataStore = tableElem.getAttribute("src-data-store");
-      if (srcDataStore != null && srcDataStore.length() > 0)
-        tableObj.put("src-data-store", srcDataStore);
+      if (skipField != null && skipField.length() > 0) tableObj.put("skip-field", skipField);
 
       String srcDatafield = tableElem.getAttribute("src-data-field");
-      if (srcDatafield != null && srcDatafield.length() > 0)
-        tableObj.put("src-data-field", srcDatafield);
+      if (srcDatafield != null && srcDatafield.length() > 0) tableObj.put("src-data-field",
+        srcDatafield);
 
       String compress = tableElem.getAttribute("compress-src-data");
-      if (compress != null && "false".equals(compress))
-        tableObj.put("compress-src-data", false);
-      else
-        tableObj.put("compress-src-data", true);
+      if (compress != null && "false".equals(compress)) tableObj.put("compress-src-data", false);
+      else tableObj.put("compress-src-data", true);
 
       NodeList columns = tableElem.getElementsByTagName("column");
       JSONArray columnArray = new FastJSONArray();
       tableObj.put("columns", columnArray);
 
-      for (int i = 0; i < columns.getLength(); ++i)
-      {
-        try
-        {
+      for (int i = 0; i < columns.getLength(); ++i) {
+        try {
           Element column = (Element) columns.item(i);
           JSONObject columnObj = new FastJSONObject();
           columnArray.put(columnObj);
@@ -78,55 +65,42 @@ public class SchemaConverter
           columnObj.put("multi", Boolean.parseBoolean(column.getAttribute("multi")));
           columnObj.put("activity", Boolean.parseBoolean(column.getAttribute("activity")));
           String delimString = column.getAttribute("delimiter");
-          if (delimString != null && delimString.trim().length() > 0)
-          {
+          if (delimString != null && delimString.trim().length() > 0) {
             columnObj.put("delimiter", delimString);
           }
 
           String f = "";
-          try
-          {
+          try {
             f = column.getAttribute("format");
-          }
-          catch (Exception ex)
-          {
+          } catch (Exception ex) {
             logger.error(ex.getMessage(), ex);
           }
-          if (!f.isEmpty())
-            columnObj.put("format", f);
+          if (!f.isEmpty()) columnObj.put("format", f);
 
           String idxString = column.getAttribute("index");
-          if (idxString != null && idxString.length() > 0)
-          {
+          if (idxString != null && idxString.length() > 0) {
             columnObj.put("index", idxString);
           }
           String storeString = column.getAttribute("store");
-          if (storeString != null && storeString.length() > 0)
-          {
+          if (storeString != null && storeString.length() > 0) {
             columnObj.put("store", storeString);
           }
           String tvString = column.getAttribute("termvector");
-          if (tvString != null && tvString.length() > 0)
-          {
+          if (tvString != null && tvString.length() > 0) {
             columnObj.put("termvector", tvString);
           }
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
           throw new ConfigurationException("Error parsing schema: " + columns.item(i), e);
         }
       }
     }
 
-
     NodeList facets = schemaDoc.getElementsByTagName("facet");
     JSONArray facetArray = new FastJSONArray();
     jsonObj.put("facets", facetArray);
 
-    for (int i = 0; i < facets.getLength(); ++i)
-    {
-      try
-      {
+    for (int i = 0; i < facets.getLength(); ++i) {
+      try {
         Element facet = (Element) facets.item(i);
         JSONObject facetObj = new FastJSONObject();
         facetArray.put(facetObj);
@@ -134,31 +108,28 @@ public class SchemaConverter
         facetObj.put("name", facet.getAttribute("name"));
         facetObj.put("type", facet.getAttribute("type"));
         String depends = facet.getAttribute("depends");
-        if (depends != null && depends.length() > 0){
+        if (depends != null && depends.length() > 0) {
           String[] dependsList = depends.split(",");
           JSONArray dependsArr = new FastJSONArray();
-          for (String dependName : dependsList)
-          {
-            if (dependName != null)
-            {
+          for (String dependName : dependsList) {
+            if (dependName != null) {
               dependName = dependName.trim();
-              if (dependName.length() != 0)
-                dependsArr.put(dependName);
+              if (dependName.length() != 0) dependsArr.put(dependName);
             }
           }
           facetObj.put("depends", dependsArr);
         }
         String column = facet.getAttribute("column");
-        if (column != null && column.length() > 0){
+        if (column != null && column.length() > 0) {
           facetObj.put("column", column);
         }
         String dynamic = facet.getAttribute("dynamic");
-        if (dynamic != null && dynamic.length() > 0){
-          facetObj.put("dynamic",dynamic);
+        if (dynamic != null && dynamic.length() > 0) {
+          facetObj.put("dynamic", dynamic);
         }
 
         NodeList paramList = facet.getElementsByTagName("param");
-        if (paramList!=null){
+        if (paramList != null) {
           JSONArray params = new FastJSONArray();
           facetObj.put("params", params);
           for (int j = 0; j < paramList.getLength(); ++j) {
@@ -171,8 +142,7 @@ public class SchemaConverter
             params.put(paramObj);
           }
         }
-      }
-      catch(Exception e){
+      } catch (Exception e) {
         throw new ConfigurationException("Error parsing schema: " + facets.item(i), e);
       }
     }
@@ -180,10 +150,9 @@ public class SchemaConverter
     return jsonObj;
   }
 
-  public static void main(String[] args) throws Exception
-  {
+  public static void main(String[] args) throws Exception {
     File xmlSchema = new File("../example/tweets/conf/schema.xml");
-    if (!xmlSchema.exists()){
+    if (!xmlSchema.exists()) {
       throw new ConfigurationException("schema not file");
     }
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();

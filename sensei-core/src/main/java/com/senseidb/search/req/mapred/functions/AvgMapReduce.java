@@ -15,6 +15,10 @@ import com.senseidb.search.req.mapred.SingleFieldAccessor;
 import com.senseidb.util.JSONUtil.FastJSONObject;
 
 public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
   private String column;
 
   @Override
@@ -23,16 +27,17 @@ public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
     if (column == null) {
       throw new IllegalStateException("Column parameter shouldn't be null");
     }
-    
+
   }
 
   @Override
-  public AvgResult map(IntArray docId, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
-      SingleFieldAccessor singleFieldAccessor = accessor.getSingleFieldAccessor(column);
-      double ret = 0;
+  public AvgResult map(IntArray docId, int docIdCount, long[] uids, FieldAccessor accessor,
+      FacetCountAccessor facetCountAccessor) {
+    SingleFieldAccessor singleFieldAccessor = accessor.getSingleFieldAccessor(column);
+    double ret = 0;
     for (int i = 0; i < docIdCount; i++) {
-      ret+= singleFieldAccessor.getDouble(docId.get(i));
-    }  
+      ret += singleFieldAccessor.getDouble(docId.get(i));
+    }
     return new AvgResult(ret / docIdCount, docIdCount);
   }
 
@@ -48,7 +53,7 @@ public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
   public AvgResult reduce(List<AvgResult> combineResults) {
     if (combineResults.isEmpty()) {
       return null;
-    }   
+    }
     int minCount = Integer.MAX_VALUE;
     for (AvgResult avgResult : combineResults) {
       if (avgResult == null || avgResult.count == 0) {
@@ -60,7 +65,7 @@ public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
     }
     if (minCount == Integer.MAX_VALUE) {
       return null;
-    }    
+    }
     double accumulatedValue = 0;
     int accumulatedCount = 0;
     for (AvgResult avgResult : combineResults) {
@@ -73,25 +78,28 @@ public class AvgMapReduce implements SenseiMapReduce<AvgResult, AvgResult> {
     double ret = accumulatedValue / ((double) accumulatedCount / minCount);
     return new AvgResult(ret, accumulatedCount);
   }
-  
- 
+
   @Override
   public JSONObject render(AvgResult reduceResult) {
-    
+
     try {
-      return new FastJSONObject().put("avg", String.format("%1.5f", reduceResult.value)).put("count", reduceResult.count);
+      return new FastJSONObject().put("avg", String.format("%1.5f", reduceResult.value)).put(
+        "count", reduceResult.count);
     } catch (JSONException e) {
       throw new RuntimeException(e);
     }
   }
 
- 
-  
-  
 }
+
 class AvgResult implements Serializable {
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
   public double value;
   public int count;
+
   public AvgResult(double value, int count) {
     super();
     this.value = value;

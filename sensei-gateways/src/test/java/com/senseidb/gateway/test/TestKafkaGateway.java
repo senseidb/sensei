@@ -38,99 +38,95 @@ public class TestKafkaGateway {
   static SenseiGateway kafkaGateway;
 
   static SenseiGateway simpleKafkaGateway;
-  
+
   static SenseiPluginRegistry pluginRegistry;
 
   static Configuration config = null;
-  
+
   static SenseiPluginRegistry pluginRegistry2;
 
   static Configuration config2 = null;
-  
+
   static KafkaServer kafkaServer = null;
-  
+
   static File kafkaLogFile = null;
-  
+
   private static ZooKeeperTestServer zkTestServer;
   private static int port;
-  
-  
+
   @BeforeClass
-  public static void init() throws Exception{
-	final ShutdownRegistryImpl shutdownRegistry = new ShutdownRegistryImpl();
-	    
-	try{
-	  zkTestServer = new ZooKeeperTestServer(0, shutdownRegistry, ZooKeeperTestServer.DEFAULT_SESSION_TIMEOUT);
-	  port = zkTestServer.startNetwork();
-	}
-	catch(Exception e) {
-	  throw new RuntimeException(e);
-	}
-		
+  public static void init() throws Exception {
+    final ShutdownRegistryImpl shutdownRegistry = new ShutdownRegistryImpl();
+
+    try {
+      zkTestServer = new ZooKeeperTestServer(0, shutdownRegistry,
+          ZooKeeperTestServer.DEFAULT_SESSION_TIMEOUT);
+      port = zkTestServer.startNetwork();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
     config = new PropertiesConfiguration(confFile);
     pluginRegistry = SenseiPluginRegistry.build(config);
     pluginRegistry.start();
 
-    
     Properties kafkaProps = new Properties();
-    
+
     kafkaProps.load(new FileReader(kafkaServerFile));
-    
+
     // override to the local running zk server
-    kafkaProps.setProperty("zk.connect", "localhost:"+port);
-    
+    kafkaProps.setProperty("zk.connect", "localhost:" + port);
+
     kafkaLogFile = new File(kafkaProps.getProperty("log.dir"));
     FileUtils.deleteDirectory(kafkaLogFile);
-    
-    KafkaConfig kafkaConfig = new KafkaConfig(kafkaProps);
-    
-    kafkaServer = new KafkaServer(kafkaConfig);
-    
-    kafkaServer.startup();
 
+    KafkaConfig kafkaConfig = new KafkaConfig(kafkaProps);
+
+    kafkaServer = new KafkaServer(kafkaConfig);
+
+    kafkaServer.startup();
 
     kafkaGateway = pluginRegistry.getBeanByFullPrefix("sensei.gateway", SenseiGateway.class);
     kafkaGateway.start();
-    
+
     config2 = new PropertiesConfiguration(confFile2);
     pluginRegistry2 = SenseiPluginRegistry.build(config2);
     pluginRegistry2.start();
 
     simpleKafkaGateway = pluginRegistry2.getBeanByFullPrefix("sensei.gateway", SenseiGateway.class);
     simpleKafkaGateway.start();
-    
+
     Properties props = new Properties();
-    props.put("zk.connect", "localhost:"+port);
+    props.put("zk.connect", "localhost:" + port);
     props.put("serializer.class", "kafka.serializer.DefaultEncoder");
 
     ProducerConfig producerConfig = new ProducerConfig(props);
-    Producer<String,Message> kafkaProducer = new Producer<String,Message>(producerConfig);
+    Producer<String, Message> kafkaProducer = new Producer<String, Message>(producerConfig);
     String topic = config2.getString("sensei.gateway.kafka.topic");
     List<ProducerData<String, Message>> msgList = new ArrayList<ProducerData<String, Message>>();
-    for (JSONObject jsonObj : BaseGatewayTestUtil.dataList){
+    for (JSONObject jsonObj : BaseGatewayTestUtil.dataList) {
       Message m = new Message(jsonObj.toString().getBytes(DefaultJsonDataSourceFilter.UTF8));
-      ProducerData<String,Message> msg = new ProducerData<String,Message>(topic,m);
+      ProducerData<String, Message> msg = new ProducerData<String, Message>(topic, m);
       msgList.add(msg);
     }
     kafkaProducer.send(msgList);
   }
-  
+
   @AfterClass
   public static void shutdown() {
     kafkaGateway.stop();
     pluginRegistry.stop();
-    
+
     simpleKafkaGateway.stop();
     pluginRegistry2.stop();
-    
-    try{
-      if (kafkaServer!=null){
+
+    try {
+      if (kafkaServer != null) {
         kafkaServer.shutdown();
         kafkaServer.awaitShutdown();
       }
       zkTestServer.shutdownNetwork();
-    }
-    finally{
+    } finally {
       try {
         FileUtils.deleteDirectory(kafkaLogFile);
       } catch (IOException e) {
@@ -138,17 +134,18 @@ public class TestKafkaGateway {
       }
     }
   }
-  
-  @Test
-  public void testSimpleKafka() throws Exception{
-    final StreamDataProvider<JSONObject> dataProvider =  simpleKafkaGateway.buildDataProvider(null, String.valueOf("0"), null, null);
-    BaseGatewayTestUtil.doTest(dataProvider);
-  }
-  
 
   @Test
-  public void testKafka() throws Exception{
- //   final StreamDataProvider<JSONObject> dataProvider = kafkaGateway.buildDataProvider(null, String.valueOf("0"), null, null);
-   // BaseGatewayTestUtil.doTest(dataProvider);
+  public void testSimpleKafka() throws Exception {
+    final StreamDataProvider<JSONObject> dataProvider = simpleKafkaGateway.buildDataProvider(null,
+      String.valueOf("0"), null, null);
+    BaseGatewayTestUtil.doTest(dataProvider);
+  }
+
+  @Test
+  public void testKafka() throws Exception {
+    // final StreamDataProvider<JSONObject> dataProvider = kafkaGateway.buildDataProvider(null,
+    // String.valueOf("0"), null, null);
+    // BaseGatewayTestUtil.doTest(dataProvider);
   }
 }

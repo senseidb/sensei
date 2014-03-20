@@ -7,14 +7,14 @@ import java.sql.SQLException;
 
 import com.senseidb.gateway.jdbc.SenseiJDBCAdaptor;
 
-public class SimpleJDBCAdaptor extends SenseiJDBCAdaptor{
+public class SimpleJDBCAdaptor extends SenseiJDBCAdaptor {
 
   private static String sql = "select json,version from test where version > ?";
+
   @Override
-  public PreparedStatement buildStatment(Connection conn, String fromVersion)
-      throws SQLException {
+  public PreparedStatement buildStatment(Connection conn, String fromVersion) throws SQLException {
     PreparedStatement stmt = conn.prepareStatement(sql);
-    
+
     int version = fromVersion == null ? 0 : Integer.parseInt(fromVersion);
     stmt.setInt(1, version);
     return stmt;

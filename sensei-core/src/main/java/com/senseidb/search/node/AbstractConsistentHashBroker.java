@@ -1,6 +1,5 @@
 package com.senseidb.search.node;
 
-
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,9 +9,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.log4j.Logger;
 
@@ -23,6 +22,7 @@ import zu.finagle.client.ZuFinagleServiceDecorator;
 import zu.finagle.client.ZuTransportClientProxy;
 import zu.finagle.serialize.ZuSerializer;
 
+import com.senseidb.conf.SenseiConfParams;
 import com.senseidb.metrics.MetricsConstants;
 import com.senseidb.search.req.AbstractSenseiRequest;
 import com.senseidb.search.req.AbstractSenseiResult;
@@ -46,12 +46,13 @@ import com.yammer.metrics.core.Timer;
  * @param <RESULT>
  */
 public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSenseiRequest, RESULT extends AbstractSenseiResult>
-    extends AbstractSenseiBroker<REQUEST, RESULT>
-{
+    extends AbstractSenseiBroker<REQUEST, RESULT> {
   private final static Logger logger = Logger.getLogger(AbstractConsistentHashBroker.class);
+  private final static Logger queryLogger = Logger.getLogger("com.sensei.querylog");
 
-	protected long _timeout = 8000;
+  protected long _timeout = 8000;
   protected final ZuSerializer<REQUEST, RESULT> _serializer;
+  private int _finagleThreadNumber = 20;
 
   private static Timer ScatterTimer = null;
   private static Timer GatherTimer = null;
@@ -60,90 +61,94 @@ public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSense
   private static Meter ErrorMeter = null;
   private static Meter EmptyMeter = null;
 
-
   protected ZuFinagleServiceDecorator<REQUEST, RESULT> serviceDecorator;
-	private RoutingAlgorithm<Service<REQUEST,RESULT>> router;
-	private ZuCluster clusterClient;
+  private final RoutingAlgorithm<Service<REQUEST, RESULT>> router;
+  static {
+    // register metrics monitoring for timers
+    try {
+      MetricName scatterMetricName = new MetricName(MetricsConstants.Domain, "timer",
+          "scatter-time", "broker");
+      ScatterTimer = Metrics.newTimer(scatterMetricName, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
-  
-  static{
-	  // register metrics monitoring for timers
-	  try{
-	    MetricName scatterMetricName = new MetricName(MetricsConstants.Domain,"timer","scatter-time","broker");
-	    ScatterTimer = Metrics.newTimer(scatterMetricName, TimeUnit.MILLISECONDS,TimeUnit.SECONDS);
-	    
-	    MetricName gatherMetricName = new MetricName(MetricsConstants.Domain,"timer","gather-time","broker");
-	    GatherTimer = Metrics.newTimer(gatherMetricName, TimeUnit.MILLISECONDS,TimeUnit.SECONDS);
+      MetricName gatherMetricName = new MetricName(MetricsConstants.Domain, "timer", "gather-time",
+          "broker");
+      GatherTimer = Metrics.newTimer(gatherMetricName, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
-	    MetricName totalMetricName = new MetricName(MetricsConstants.Domain,"timer","total-time","broker");
-	    TotalTimer = Metrics.newTimer(totalMetricName, TimeUnit.MILLISECONDS,TimeUnit.SECONDS);
-	    
-	    MetricName searchCounterMetricName = new MetricName(MetricsConstants.Domain,"meter","search-count","broker");
-	    SearchCounter = Metrics.newMeter(searchCounterMetricName, "requets", TimeUnit.SECONDS);
+      MetricName totalMetricName = new MetricName(MetricsConstants.Domain, "timer", "total-time",
+          "broker");
+      TotalTimer = Metrics.newTimer(totalMetricName, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 
-	    MetricName errorMetricName = new MetricName(MetricsConstants.Domain,"meter","error-meter","broker");
-	    ErrorMeter = Metrics.newMeter(errorMetricName, "errors",TimeUnit.SECONDS);
-	    
-	    MetricName emptyMetricName = new MetricName(MetricsConstants.Domain,"meter","empty-meter","broker");
-	    EmptyMeter = Metrics.newMeter(emptyMetricName, "null-hits", TimeUnit.SECONDS);
-	  }
-	  catch(Exception e){
-		logger.error(e.getMessage(),e);
-	  }
+      MetricName searchCounterMetricName = new MetricName(MetricsConstants.Domain, "meter",
+          "search-count", "broker");
+      SearchCounter = Metrics.newMeter(searchCounterMetricName, "requets", TimeUnit.SECONDS);
+
+      MetricName errorMetricName = new MetricName(MetricsConstants.Domain, "meter", "error-meter",
+          "broker");
+      ErrorMeter = Metrics.newMeter(errorMetricName, "errors", TimeUnit.SECONDS);
+
+      MetricName emptyMetricName = new MetricName(MetricsConstants.Domain, "meter", "empty-meter",
+          "broker");
+      EmptyMeter = Metrics.newMeter(emptyMetricName, "null-hits", TimeUnit.SECONDS);
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    }
   }
-  
-	/**
-	 * @param clusterClient
+
+  /**
+   * @param clusterClient
    * @param serializer
    *          The serializer used to serialize/deserialize request/response pairs
-	 */
-	public AbstractConsistentHashBroker(ZuCluster clusterClient, ZuSerializer<REQUEST, RESULT> serializer) {
-		super();
-		this.clusterClient = clusterClient;
-		_serializer = serializer;
-		ZuTransportClientProxy<REQUEST, RESULT> proxy = new ZuTransportClientProxy<REQUEST, RESULT>(getMessageType(),
-				_serializer);
-		serviceDecorator = new ZuFinagleServiceDecorator<REQUEST, RESULT>(proxy);
-		router = new ConsistentHashRoutingAlgorithm<Service<REQUEST, RESULT>>(serviceDecorator);
-		clusterClient.addClusterEventListener(router);
-	}
+   */
+  public AbstractConsistentHashBroker(ZuCluster clusterClient,
+      ZuSerializer<REQUEST, RESULT> serializer, Configuration senseiConf) {
+    super();
+    _serializer = serializer;
+    ZuTransportClientProxy<REQUEST, RESULT> proxy = new ZuTransportClientProxy<REQUEST, RESULT>(
+        getMessageType(), _serializer);
+    if (this instanceof SenseiSysBroker) {
+      // hard code config for SenseiSysBroker
+      _timeout = 8000;
+      _finagleThreadNumber = 4;
+    } else {
+      _timeout = senseiConf.getLong(SenseiConfParams.SERVER_BROKER_TIMEOUT, 8000);
+      _finagleThreadNumber = senseiConf.getInt(SenseiConfParams.SERVER_BROKER_FINAGLE_THREAD, 20);
+    }
+    serviceDecorator = new ZuFinagleServiceDecorator<REQUEST, RESULT>(proxy, Duration.apply(
+      _timeout, TimeUnit.MILLISECONDS), _finagleThreadNumber);
 
-  
-	public REQUEST customizeRequest(REQUEST request) {
-		return request;
-	}
+    router = new ConsistentHashRoutingAlgorithm<Service<REQUEST, RESULT>>(serviceDecorator);
+    clusterClient.addClusterEventListener(router);
+  }
+
+  public REQUEST customizeRequest(REQUEST request) {
+    return request;
+  }
 
   /**
    * @return an empty result instance. Used when the request cannot be properly
    *         processed or when the true result is empty.
    */
+  @Override
   public abstract RESULT getEmptyResultInstance();
 
   /**
    * The method that provides the search service.
-   * 
+   *
    * @param req
    * @return
    * @throws SenseiException
    */
-  public RESULT browse(final REQUEST req) throws SenseiException
-  {
-//    if (_partitions == null){
-//      ErrorMeter.mark();
-//      throw new SenseiException("Browse called before cluster is connected!");
-//    }
+  @Override
+  public RESULT browse(final REQUEST req) throws SenseiException {
     SearchCounter.mark();
-    try
-    {
-      return TotalTimer.time(new Callable<RESULT>(){
-    	@Override
-  		public RESULT call() throws Exception {
-          return doBrowse(req); 	  
-    	}
+    try {
+      return TotalTimer.time(new Callable<RESULT>() {
+        @Override
+        public RESULT call() throws Exception {
+          return doBrowse(req);
+        }
       });
-    } 
-    catch (Exception e)
-    {
+    } catch (Exception e) {
       ErrorMeter.mark();
       throw new SenseiException(e.getMessage(), e);
     }
@@ -152,7 +157,7 @@ public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSense
   /**
    * Merge results on the client/broker side. It likely works differently from
    * the one in the search node.
-   * 
+   *
    * @param request
    *          the original request object
    * @param resultList
@@ -165,18 +170,16 @@ public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSense
     String param = req.getRouteParam();
     if (param == null) {
       return RandomStringUtils.random(4);
-    }
-    else {
+    } else {
       return param;
     }
   }
 
-  protected RESULT doBrowse(final REQUEST req)
-  {
+  protected RESULT doBrowse(final REQUEST req) {
     final long time = System.currentTimeMillis();
 
     final List<RESULT> resultList = new ArrayList<RESULT>();
-   
+
     try {
       resultList.addAll(ScatterTimer.time(new Callable<List<RESULT>>() {
         @Override
@@ -188,16 +191,19 @@ public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSense
       ErrorMeter.mark();
       RESULT emptyResult = getEmptyResultInstance();
       logger.error("Error running scatter/gather", e);
-      emptyResult.addError(new SenseiError("Error gathering the results" + e.getMessage(), ErrorType.BrokerGatherError));
+      emptyResult.addError(new SenseiError("Error gathering the results, " + e.getMessage(),
+          ErrorType.BrokerGatherError));
+      emptyResult.setTime(System.currentTimeMillis() - time);
       return emptyResult;
     }
 
-    if (resultList.size() == 0)
-    {
+    if (resultList.size() == 0) {
       logger.error("no result received at all return empty result");
       RESULT emptyResult = getEmptyResultInstance();
-      emptyResult.addError(new SenseiError("Error gathering the results. " + "no result received at all return empty result", ErrorType.BrokerGatherError));
+      emptyResult.addError(new SenseiError("Error gathering the results. "
+          + "no result received at all return empty result", ErrorType.BrokerGatherError));
       EmptyMeter.mark();
+      emptyResult.setTime(System.currentTimeMillis() - time);
       return emptyResult;
     }
 
@@ -211,95 +217,108 @@ public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSense
       });
     } catch (Exception e) {
       result = getEmptyResultInstance();
-      logger.error("Error gathering the results", e);
-      result.addError(new SenseiError("Error gathering the results" + e.getMessage(), ErrorType.BrokerGatherError));
+      logger.error("Error gathering the results: ", e);
+      result.addError(new SenseiError("Error gathering the results, " + e.getMessage(),
+          ErrorType.BrokerGatherError));
       ErrorMeter.mark();
     }
-
-    if (logger.isDebugEnabled()){
-      logger.debug("remote search took " + (System.currentTimeMillis() - time) + "ms");
-    }
-
+    result.setTime(System.currentTimeMillis() - time);
+    queryLogger.info("doBrowse took " + result.getTime() + "ms");
     return result;
   }
-  
-	protected List<RESULT> doCall(REQUEST req) throws ExecutionException {
-		Set<Integer> shards = router.getShards();
 
-		Map<Service<REQUEST, RESULT>, REQUEST> serviceToRequest = new HashMap<Service<REQUEST, RESULT>, REQUEST>();
+  @SuppressWarnings("unchecked")
+  protected List<RESULT> doCall(REQUEST req) {
+    Set<Integer> shards = router.getShards();
 
-		for (Integer shard : shards) {
-			Service<REQUEST, RESULT> service = router.route(getRouteParam(req).getBytes(), shard);
+    Map<Service<REQUEST, RESULT>, REQUEST> serviceToRequest = new HashMap<Service<REQUEST, RESULT>, REQUEST>();
 
-			if (service == null) {
-				logger.warn("router returned null as a destination service");
-				continue;
-			}
+    byte[] routeBytes = getRouteParam(req).getBytes();
+    for (Integer shard : shards) {
+      Service<REQUEST, RESULT> service = router.route(routeBytes, shard);
+      if (service == null) {
+        logger.warn("router returned null as a destination service");
+        continue;
+      }
 
-			REQUEST requestToNode = serviceToRequest.get(service);
-			if (requestToNode == null) {
+      REQUEST requestToNode = serviceToRequest.get(service);
+      if (requestToNode == null) {
         // TODO: Cloning is yucky per http://www.artima.com/intv/bloch13.htm
-				requestToNode = (REQUEST) (((SenseiRequest) req).clone());
-				requestToNode = customizeRequest(requestToNode);
-				requestToNode.setPartitions(new HashSet<Integer>());
-				serviceToRequest.put(service, requestToNode);
-			}
-			requestToNode.getPartitions().add(shard);
-		}
+        requestToNode = (REQUEST) (((SenseiRequest) req).clone());
+        requestToNode = customizeRequest(requestToNode);
+        requestToNode.setPartitions(new HashSet<Integer>());
+        serviceToRequest.put(service, requestToNode);
+      }
+      requestToNode.getPartitions().add(shard);
+    }
 
-		return executeRequestsInParallel(serviceToRequest, _timeout);
-	}
+    return executeRequestsInParallel(serviceToRequest, _timeout);
+  }
 
-	protected abstract String getMessageType();
-  
-  public void shutdown()
-  {
+  protected abstract String getMessageType();
+
+  @Override
+  public void shutdown() {
     logger.info("shutting down broker...");
   }
 
-  public long getTimeout() {
-    return _timeout;
+  protected List<RESULT> executeRequestsInParallel(
+      final Map<Service<REQUEST, RESULT>, REQUEST> serviceToRequest, long timeout) {
+    final long start = System.currentTimeMillis();
+    final List<Future<RESULT>> futures = new ArrayList<Future<RESULT>>();
+    final List<RESULT> results = new ArrayList<RESULT>();
+    final Map<Service<REQUEST, RESULT>, Long> latencies = new HashMap<Service<REQUEST, RESULT>, Long>();
+    for (final Entry<Service<REQUEST, RESULT>, REQUEST> entry : serviceToRequest.entrySet()) {
+      latencies.put(entry.getKey(), (long) -1);
+      futures.add(entry.getKey().apply(entry.getValue())
+          .addEventListener(new FutureEventListener<RESULT>() {
+
+            @Override
+            public void onFailure(Throwable t) {
+              logger.error("Failed to get response from " + getServiceAddress(entry.getKey()), t);
+            }
+
+            @Override
+            public void onSuccess(RESULT result) {
+              synchronized (results) {
+                results.add(result);
+                latencies.put(entry.getKey(), System.currentTimeMillis() - start);
+              }
+            }
+          }));
+    }
+
+    Future<List<RESULT>> collected = Future.collect(futures);
+    try {
+      collected.apply(Duration.apply(timeout, TimeUnit.MILLISECONDS));
+    } catch (Exception e) {
+      logger.error("Failed to get results from all nodes, exception: " + e.getMessage());
+    }
+
+    String latencyLog = "";
+    for (final Entry<Service<REQUEST, RESULT>, Long> entry : latencies.entrySet()){
+      if (entry.getValue() == -1) {
+        logger.error("Missed result from " + getServiceAddress(entry.getKey()));
+        continue;
+      }
+      latencyLog += getServiceAddress(entry.getKey()) + ":" + entry.getValue() + "ms;";
+    }
+
+    logger.info(String.format("Getting responses from %d nodes took %dms, nodes latency distribution: %s", results.size(),
+      (System.currentTimeMillis() - start), latencyLog));
+    return results;
   }
 
-  public void setTimeout(long timeout) {
-    this._timeout = timeout;
+  protected static Set<InetSocketAddress> getNodesAddresses(
+      Map<Integer, List<InetSocketAddress>> clusterView) {
+    Set<InetSocketAddress> nodes = new HashSet<InetSocketAddress>();
+    for (List<InetSocketAddress> inetSocketAddressList : clusterView.values()) {
+      nodes.addAll(inetSocketAddressList);
+    }
+    return nodes;
   }
 
-  /**
-   * @return boolean representing whether or not the server can tolerate node failures or timeouts and merge the other
-   * results. It's a tradeoff between fault tolerance and accuracy that may be acceptable for some applications
-   */
-  public abstract boolean allowPartialMerge();
-
-  protected List<RESULT> executeRequestsInParallel(final Map<Service<REQUEST, RESULT>, REQUEST> serviceToRequest, long timeout) {
-		final List<Future<RESULT>> futures = new ArrayList<Future<RESULT>>();
-		for (Entry<Service<REQUEST, RESULT>, REQUEST> entry : serviceToRequest.entrySet()) {
-			futures.add(entry.getKey().apply(entry.getValue()).addEventListener(new FutureEventListener<RESULT>() {
-	
-				@Override
-				public void onFailure(Throwable t) {
-					logger.error("Failed to get response", t);
-				}
-	
-				@Override
-				public void onSuccess(RESULT result) {
-					// do nothing as we wait for all results below
-				}
-			}));
-		}
-	
-		Future<List<RESULT>> collected = Future.collect(futures);
-		List<RESULT> results = collected.apply(Duration.apply(timeout, TimeUnit.MILLISECONDS));
-		logger.debug(String.format("There are %d responses", results.size()));
-		return results;
-	}
-
-
-	protected static Set<InetSocketAddress> getNodesAddresses(Map<Integer, List<InetSocketAddress>> clusterView) {
-		Set<InetSocketAddress> nodes = new HashSet<InetSocketAddress>();
-		for (List<InetSocketAddress> inetSocketAddressList : clusterView.values()) {
-			nodes.addAll(inetSocketAddressList);
-		}
-		return nodes;
-	}
+  public InetSocketAddress getServiceAddress(Service<REQUEST, RESULT> service) {
+    return router.getServiceAddress(service);
+  }
 }

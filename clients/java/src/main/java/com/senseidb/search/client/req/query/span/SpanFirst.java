@@ -18,12 +18,13 @@ import com.senseidb.search.client.req.query.QueryJsonHandler;
  *
  *
  */
+@SuppressWarnings("unused")
 @CustomJsonHandler(QueryJsonHandler.class)
 public class SpanFirst extends Query {
 
   SpanTerm match;
   int end;
-  private double boost;
+  private final double boost;
 
   public SpanFirst(SpanTerm match, int end, double boost) {
     super();

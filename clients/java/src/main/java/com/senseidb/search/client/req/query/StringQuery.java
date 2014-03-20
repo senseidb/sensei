@@ -6,7 +6,6 @@ import java.util.List;
 import com.senseidb.search.client.json.CustomJsonHandler;
 import com.senseidb.search.client.json.JsonField;
 import com.senseidb.search.client.req.Operator;
-import com.senseidb.search.client.req.filter.Filter;
 
 /**
  * <p>
@@ -155,6 +154,7 @@ import com.senseidb.search.client.req.filter.Filter;
  * </p>
  *
  */
+@SuppressWarnings("unused")
 @CustomJsonHandler(QueryJsonHandler.class)
 public class StringQuery extends Query {
   @JsonField("default_field")
@@ -189,7 +189,7 @@ public class StringQuery extends Query {
   }
 
   public static class Builder {
-    private StringQuery query = new StringQuery();
+    private final StringQuery query = new StringQuery();
 
     public Builder defaultField(String defaultField) {
       query.defaultField = defaultField;

@@ -11,17 +11,14 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.log4j.Logger;
 import org.apache.lucene.search.Query;
 
-import proj.zoie.api.ZoieIndexReader;
-import proj.zoie.api.ZoieIndexReader.SubReaderAccessor;
-import proj.zoie.api.ZoieIndexReader.SubReaderInfo;
 import zu.finagle.serialize.JOSSSerializer;
 import zu.finagle.serialize.ZuSerializer;
 
-import com.browseengine.bobo.api.BoboBrowser;
-import com.browseengine.bobo.api.BoboIndexReader;
+import com.browseengine.bobo.api.BoboSegmentReader;
 import com.browseengine.bobo.api.BrowseException;
 import com.browseengine.bobo.api.BrowseHit;
 import com.browseengine.bobo.api.BrowseRequest;
@@ -45,247 +42,215 @@ import com.yammer.metrics.core.Timer;
 
 public class CoreSenseiServiceImpl extends AbstractSenseiCoreService<SenseiRequest, SenseiResult> {
 
-	public static final ZuSerializer<SenseiRequest, SenseiResult> JAVA_SERIALIZER = new JOSSSerializer<SenseiRequest, SenseiResult>();
-	public static final String MESSAGE_TYPE_NAME = "SenseiRequest";
-	
-	private static final Logger logger = Logger.getLogger(CoreSenseiServiceImpl.class);
-	
-	private static Timer timerMetric = null;
-	static{
-		  // register prune time metric
-		  try{
-		    MetricName metricName = new MetricName(MetricsConstants.Domain, "timer", "prune", "node");
-		    timerMetric = Metrics.newTimer(metricName, TimeUnit.MILLISECONDS,TimeUnit.SECONDS);
-		  }
-		  catch(Exception e){
-				logger.error(e.getMessage(),e);
-		  }
-	}
-	 
-   
-   
-	
-	public CoreSenseiServiceImpl(SenseiCore core) {
-		super(core);
-		
-	}
-	
-	private SenseiResult browse(SenseiRequest senseiRequest, MultiBoboBrowser browser, BrowseRequest req, SubReaderAccessor<BoboIndexReader> subReaderAccessor) throws BrowseException
-	  {
-	    final SenseiResult result = new SenseiResult();
+  public static final ZuSerializer<SenseiRequest, SenseiResult> JAVA_SERIALIZER = new JOSSSerializer<SenseiRequest, SenseiResult>();
+  public static final String MESSAGE_TYPE_NAME = "SenseiRequest";
 
-	    long start = System.currentTimeMillis();
-	    int offset = req.getOffset();
-	    int count = req.getCount();
+  private static final Logger logger = Logger.getLogger(CoreSenseiServiceImpl.class);
 
-	    if (offset < 0 || count < 0)
-	    {
-	      throw new IllegalArgumentException("both offset and count must be > 0: " + offset + "/" + count);
-	    }
-	    // SortCollector collector =
-	    // browser.getSortCollector(req.getSort(),req.getQuery(), offset, count,
-	    // req.isFetchStoredFields(),false);
+  private static Timer timerMetric = null;
+  static {
+    // register prune time metric
+    try {
+      MetricName metricName = new MetricName(MetricsConstants.Domain, "timer", "prune", "node");
+      timerMetric = Metrics.newTimer(metricName, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+    }
+  }
 
-	    // Map<String, FacetAccessible> facetCollectors = new HashMap<String,
-	    // FacetAccessible>();
-	    // browser.browse(req, collector, facetCollectors);
-	    BrowseResult res = browser.browse(req);
-	    BrowseHit[] hits = res.getHits();
-	    if (req.getMapReduceWrapper() != null) {
-	      result.setMapReduceResult(req.getMapReduceWrapper().getResult());
-	    }
-	    SenseiHit[] senseiHits = new SenseiHit[hits.length];
-      Set<String> selectSet = senseiRequest.getSelectSet();
-	    for (int i = 0; i < hits.length; i++)
-	    {
-	      BrowseHit hit = hits[i];
-	      SenseiHit senseiHit = new SenseiHit();
+  public CoreSenseiServiceImpl(SenseiCore core, Configuration conf) {
+    super(core, conf);
+  }
 
-	      int docid = hit.getDocid();
-	      SubReaderInfo<BoboIndexReader> readerInfo = subReaderAccessor.getSubReaderInfo(docid);
-        Long uid = (Long)hit.getRawField(PARAM_RESULT_HIT_UID);
-        if (uid == null)
-          uid = ((ZoieIndexReader<BoboIndexReader>) readerInfo.subreader.getInnerReader()).getUID(readerInfo.subdocid);
-	      senseiHit.setUID(uid);
-	      senseiHit.setDocid(docid);
-	      senseiHit.setScore(hit.getScore());
-	      senseiHit.setComparable(hit.getComparable());
-        if (selectSet != null && selectSet.size() != 0)
-        {
-          // Clear the data those are not used:
-          if (hit.getFieldValues() != null)
-          {
-            Iterator<String> iter = hit.getFieldValues().keySet().iterator();
-            while (iter.hasNext())
-            {
-              if (!selectSet.contains(iter.next()))
-              {
-                iter.remove();
-              }
-            }
-          }
-          if (hit.getRawFieldValues() != null)
-          {
-            Iterator<String> iter = hit.getRawFieldValues().keySet().iterator();
-            while (iter.hasNext())
-            {
-              if (!selectSet.contains(iter.next()))
-              {
-                iter.remove();
-              }
+  private SenseiResult browse(SenseiRequest senseiRequest, MultiBoboBrowser browser,
+      BrowseRequest req) throws BrowseException {
+
+    final SenseiResult result = new SenseiResult();
+
+    long start = System.currentTimeMillis();
+    int offset = req.getOffset();
+    int count = req.getCount();
+
+    if (offset < 0 || count < 0) {
+      throw new IllegalArgumentException("both offset and count must be > 0: " + offset + "/"
+          + count);
+    }
+    // SortCollector collector =
+    // browser.getSortCollector(req.getSort(),req.getQuery(), offset, count,
+    // req.isFetchStoredFields(),false);
+
+    // Map<String, FacetAccessible> facetCollectors = new HashMap<String,
+    // FacetAccessible>();
+    // browser.browse(req, collector, facetCollectors);
+    BrowseResult res = browser.browse(req);
+    BrowseHit[] hits = res.getHits();
+    if (req.getMapReduceWrapper() != null) {
+      result.setMapReduceResult(req.getMapReduceWrapper().getResult());
+    }
+    SenseiHit[] senseiHits = new SenseiHit[hits.length];
+    Set<String> selectSet = senseiRequest.getSelectSet();
+    for (int i = 0; i < hits.length; i++) {
+      BrowseHit hit = hits[i];
+      SenseiHit senseiHit = new SenseiHit();
+
+      int docid = hit.getDocid();
+      Long uid = (Long) hit.getRawField(PARAM_RESULT_HIT_UID);
+      senseiHit.setUID(uid);
+      senseiHit.setDocid(docid);
+      senseiHit.setScore(hit.getScore());
+      senseiHit.setComparable(hit.getComparable());
+      if (selectSet != null && selectSet.size() != 0) {
+        // Clear the data those are not used:
+        if (hit.getFieldValues() != null) {
+          Iterator<String> iter = hit.getFieldValues().keySet().iterator();
+          while (iter.hasNext()) {
+            if (!selectSet.contains(iter.next())) {
+              iter.remove();
             }
           }
         }
-        senseiHit.setFieldValues(hit.getFieldValues());
-        senseiHit.setRawFieldValues(hit.getRawFieldValues());
-	      senseiHit.setStoredFields(hit.getStoredFields());
-	      senseiHit.setExplanation(hit.getExplanation());
-	      senseiHit.setGroupField(hit.getGroupField());
-	      senseiHit.setGroupValue(hit.getGroupValue());
-	      senseiHit.setRawGroupValue(hit.getRawGroupValue());
-	      senseiHit.setGroupHitsCount(hit.getGroupHitsCount());
-	      senseiHit.setTermFreqMap(hit.getTermFreqMap());
-
-	      senseiHits[i] = senseiHit;
-	    }
-	    result.setHits(senseiHits);
-	    result.setNumHitsLong(res.getNumHits());
-	    result.setNumGroupsLong(res.getNumGroups());
-	    result.setGroupAccessibles(res.getGroupAccessibles());
-	    result.setSortCollector(res.getSortCollector());
-
-	    result.setTotalDocsLong(browser.numDocs());
-	    
-
-	    result.addAll(res.getFacetMap());
-	    
-      // Defer the closing of facetAccessibles till result merging time.
-      
-	    // Collection<FacetAccessible> facetAccessibles = facetMap.values();
-	    // for (FacetAccessible facetAccessible : facetAccessibles){
-	    // 	facetAccessible.close();
-	    // }
-	    
-	    long end = System.currentTimeMillis();
-	    result.setTime(end - start);
-	    // set the transaction ID to trace transactions
-	    result.setTid(req.getTid());
-
-	    Query parsedQ = req.getQuery();
-	    if (parsedQ != null)
-	    {
-	      result.setParsedQuery(parsedQ.toString());
-	    } else
-	    {
-	      result.setParsedQuery("*:*");
-	    }
-	    return result;
-	  }
-	
-	@Override
-	public SenseiResult handlePartitionedRequest(final SenseiRequest request,
-			List<BoboIndexReader> readerList,SenseiQueryBuilderFactory queryBuilderFactory) throws Exception {
-	    MultiBoboBrowser browser = null;
-
-	    try
-	    {
-          final List<BoboIndexReader> segmentReaders = BoboBrowser.gatherSubReaders(readerList);
-          if (segmentReaders!=null && segmentReaders.size()>0){
-        	final AtomicInteger skipDocs = new AtomicInteger(0);
-
-          final SenseiIndexPruner pruner = _core.getIndexPruner();
-
-        	List<BoboIndexReader> validatedSegmentReaders = timerMetric.time(new Callable<List<BoboIndexReader>>(){
-
-				     @Override
-				     public List<BoboIndexReader> call() throws Exception {
-		  	        IndexReaderSelector readerSelector = pruner.getReaderSelector(request);
-		  	        List<BoboIndexReader> validatedReaders = new ArrayList<BoboIndexReader>(segmentReaders.size());
-		        	  for (BoboIndexReader segmentReader : segmentReaders){
-		        		  if (readerSelector.isSelected(segmentReader)){
-		        			  validatedReaders.add(segmentReader);
-		        		  }
-		        		  else{
-		        			  skipDocs.addAndGet(segmentReader.numDocs());
-		        		  }
-		        	  }
-		        	  return validatedReaders;
-				      }
-        		
-        	});
-
-          pruner.sort(validatedSegmentReaders);
-
-	        browser = new MultiBoboBrowser(BoboBrowser.createBrowsables(validatedSegmentReaders));
-	        BrowseRequest breq = RequestConverter.convert(request, queryBuilderFactory);
-	        if (request.getMapReduceFunction() != null) {
-	          SenseiMapFunctionWrapper mapWrapper = new SenseiMapFunctionWrapper(request.getMapReduceFunction(), _core.getSystemInfo().getFacetInfos(), _core.getFieldAccessorFactory());	        
-            breq.setMapReduceWrapper(mapWrapper);
-	        }	        
-          SubReaderAccessor<BoboIndexReader> subReaderAccessor =
-              ZoieIndexReader.getSubReaderAccessor(validatedSegmentReaders);
-	        SenseiResult res = browse(request, browser, breq, subReaderAccessor);
-	        int totalDocs = res.getTotalDocs()+skipDocs.get();
-	        res.setTotalDocs(totalDocs);
-	        return res;
+        if (hit.getRawFieldValues() != null) {
+          Iterator<String> iter = hit.getRawFieldValues().keySet().iterator();
+          while (iter.hasNext()) {
+            if (!selectSet.contains(iter.next())) {
+              iter.remove();
+            }
           }
-          else{
-        	return new SenseiResult();
-          }
-	    } catch (Exception e)
-	    {
-	      logger.error(e.getMessage(), e);
-	      throw e;
-	    } finally
-	    {
-	      if (browser != null)
-	      {
-	        try
-	        {
-	          browser.close();
-	        } catch (IOException ioe)
-	        {
-	          logger.error(ioe.getMessage(), ioe);
-	        }
-	      }
-	    }
-	}
+        }
+      }
+      senseiHit.setFieldValues(hit.getFieldValues());
+      senseiHit.setRawFieldValues(hit.getRawFieldValues());
+      senseiHit.setStoredFields(hit.getStoredFields());
+      senseiHit.setExplanation(hit.getExplanation());
+      senseiHit.setGroupField(hit.getGroupField());
+      senseiHit.setGroupValue(hit.getGroupValue());
+      senseiHit.setRawGroupValue(hit.getRawGroupValue());
+      senseiHit.setGroupHitsCount(hit.getGroupHitsCount());
+      senseiHit.setTermVectorMap(hit.getTermVectorMap());
 
-	@Override
-	public SenseiResult mergePartitionedResults(SenseiRequest r,
-			List<SenseiResult> resultList) {
-    try
-    {
-      return ResultMerger.merge(r, resultList, true);
+      senseiHits[i] = senseiHit;
     }
-    finally
-    {
-      if (resultList != null)
-      {
-        for (SenseiResult res : resultList)
-        {
+    result.setHits(senseiHits);
+    result.setNumHitsLong(res.getNumHits());
+    result.setNumGroupsLong(res.getNumGroups());
+    result.setGroupAccessibles(res.getGroupAccessibles());
+    result.setSortCollector(res.getSortCollector());
+
+    result.setTotalDocsLong(browser.numDocs());
+
+    result.addAll(res.getFacetMap());
+
+    // Defer the closing of facetAccessibles till result merging time.
+
+    // Collection<FacetAccessible> facetAccessibles = facetMap.values();
+    // for (FacetAccessible facetAccessible : facetAccessibles){
+    // facetAccessible.close();
+    // }
+
+    long end = System.currentTimeMillis();
+    result.setTime(end - start);
+    // set the transaction ID to trace transactions
+    result.setTid(req.getTid());
+
+    Query parsedQ = req.getQuery();
+    if (parsedQ != null) {
+      result.setParsedQuery(parsedQ.toString());
+    } else {
+      result.setParsedQuery("*:*");
+    }
+    return result;
+  }
+
+  @Override
+  public SenseiResult handlePartitionedRequest(final SenseiRequest request,
+      final List<BoboSegmentReader> readerList, SenseiQueryBuilderFactory queryBuilderFactory)
+      throws Exception {
+    MultiBoboBrowser browser = null;
+
+    try {
+      if (readerList != null && readerList.size() > 0) {
+        final AtomicInteger skipDocs = new AtomicInteger(0);
+
+        final SenseiIndexPruner pruner = _core.getIndexPruner();
+
+        List<BoboSegmentReader> validatedSegmentReaders = timerMetric
+            .time(new Callable<List<BoboSegmentReader>>() {
+
+              @Override
+              public List<BoboSegmentReader> call() throws Exception {
+                IndexReaderSelector readerSelector = pruner.getReaderSelector(request);
+                List<BoboSegmentReader> validatedReaders = new ArrayList<BoboSegmentReader>(
+                    readerList.size());
+                for (BoboSegmentReader segmentReader : readerList) {
+                  if (readerSelector.isSelected(segmentReader)) {
+                    validatedReaders.add(segmentReader);
+                  } else {
+                    skipDocs.addAndGet(segmentReader.numDocs());
+                  }
+                }
+                return validatedReaders;
+              }
+
+            });
+
+        pruner.sort(validatedSegmentReaders);
+        browser = new MultiBoboBrowser(validatedSegmentReaders);
+        BrowseRequest breq = RequestConverter.convert(request, queryBuilderFactory);
+        if (request.getMapReduceFunction() != null) {
+          SenseiMapFunctionWrapper mapWrapper = new SenseiMapFunctionWrapper(
+              request.getMapReduceFunction(), _core.getSystemInfo().getFacetInfos(),
+              _core.getFieldAccessorFactory());
+          breq.setMapReduceWrapper(mapWrapper);
+        }
+        SenseiResult res = browse(request, browser, breq);
+        int totalDocs = res.getTotalDocs() + skipDocs.get();
+        res.setTotalDocs(totalDocs);
+        return res;
+      } else {
+        return new SenseiResult();
+      }
+    } catch (Exception e) {
+      logger.error(e.getMessage(), e);
+      throw e;
+    } finally {
+      if (browser != null) {
+        try {
+          browser.close();
+        } catch (IOException ioe) {
+          logger.error(ioe.getMessage(), ioe);
+        }
+      }
+    }
+  }
+
+  @Override
+  public SenseiResult mergePartitionedResults(SenseiRequest r, List<SenseiResult> resultList) {
+    try {
+      return ResultMerger.merge(r, resultList, true);
+    } finally {
+      if (resultList != null) {
+        for (SenseiResult res : resultList) {
           SortCollector sortCollector = res.getSortCollector();
-          if (sortCollector != null)
-          {
+          if (sortCollector != null) {
             sortCollector.close();
           }
         }
       }
     }
-	}
+  }
 
-	@Override
-	public SenseiResult getEmptyResultInstance(Throwable error) {
-		return new SenseiResult();
-	}
+  @Override
+  public SenseiResult getEmptyResultInstance(Throwable error) {
+    return new SenseiResult();
+  }
 
-	@Override
-	public String getMessageTypeName() {
-		return MESSAGE_TYPE_NAME;
-	}
-	
-	@Override
-	public ZuSerializer<SenseiRequest, SenseiResult>  getSerializer() {
-		 return JAVA_SERIALIZER;
-	}
+  @Override
+  public String getMessageTypeName() {
+    return MESSAGE_TYPE_NAME;
+  }
+
+  @Override
+  public ZuSerializer<SenseiRequest, SenseiResult> getSerializer() {
+    return JAVA_SERIALIZER;
+  }
 }

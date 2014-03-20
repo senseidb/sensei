@@ -16,24 +16,24 @@ import com.browseengine.bobo.facets.RuntimeFacetHandlerFactory;
 
 public class SenseiPluginRegistry {
   public static final String FACET_CONF_PREFIX = "sensei.custom.facets";
-  private Map<String, PluginHolder> pluginsByPrefix = new LinkedHashMap<String, PluginHolder>();
-  private Map<String, PluginHolder> pluginsByNames = new LinkedHashMap<String, PluginHolder>();
-  private List<PluginHolder> plugins = new ArrayList<PluginHolder>();
+  private final Map<String, PluginHolder> pluginsByPrefix = new LinkedHashMap<String, PluginHolder>();
+  private final Map<String, PluginHolder> pluginsByNames = new LinkedHashMap<String, PluginHolder>();
+  private final List<PluginHolder> plugins = new ArrayList<PluginHolder>();
   private Configuration configuration;
   private static Map<Configuration, SenseiPluginRegistry> cachedRegistries = new IdentityHashMap<Configuration, SenseiPluginRegistry>();
+
   private SenseiPluginRegistry() {
 
   }
+
   public static synchronized SenseiPluginRegistry get(Configuration conf) {
     return cachedRegistries.get(conf);
   }
 
   public static String getNameByPrefix(String prefix) {
     if (prefix != null) {
-      if (prefix.contains("."))
-        return prefix.substring(prefix.lastIndexOf(".") + 1);
-      else
-        return prefix;
+      if (prefix.contains(".")) return prefix.substring(prefix.lastIndexOf(".") + 1);
+      else return prefix;
     }
     return null;
   }
@@ -45,14 +45,14 @@ public class SenseiPluginRegistry {
 
     SenseiPluginRegistry ret = new SenseiPluginRegistry();
     ret.configuration = conf;
-    Iterator keysIterator = conf.getKeys();
+    Iterator<?> keysIterator = conf.getKeys();
     while (keysIterator.hasNext()) {
       String key = (String) keysIterator.next();
       if (key.endsWith(".class")) {
         String prefix = key.substring(0, key.indexOf(".class"));
         String pluginName = getNameByPrefix(prefix);
-        String pluginCLass = conf.getString(key);
-        ret.plugins.add(new PluginHolder(ret, pluginCLass, pluginName, prefix));
+        String pluginClass = conf.getString(key);
+        ret.plugins.add(new PluginHolder(ret, pluginClass, pluginName, prefix));
       }
       if (key.endsWith(".instance")) {
         String prefix = key.substring(0, key.indexOf(".instance"));
@@ -65,7 +65,7 @@ public class SenseiPluginRegistry {
       ret.pluginsByPrefix.put(pluginHolder.fullPrefix, pluginHolder);
       ret.pluginsByNames.put(pluginHolder.pluginName, pluginHolder);
 
-      Iterator propertyIterator = conf.getKeys(pluginHolder.fullPrefix);
+      Iterator<?> propertyIterator = conf.getKeys(pluginHolder.fullPrefix);
       while (propertyIterator.hasNext()) {
         String propertyName = (String) propertyIterator.next();
         if (propertyName.endsWith(".class")) {
@@ -83,6 +83,7 @@ public class SenseiPluginRegistry {
     return ret;
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T getBeanByName(String name, Class<T> type) {
     PluginHolder holder = pluginsByNames.get(name);
     if (holder == null) {
@@ -91,20 +92,24 @@ public class SenseiPluginRegistry {
     return (T) holder.getInstance();
   }
 
+  @SuppressWarnings("unchecked")
   public <T> List<T> getBeansByType(Class<T> type) {
     List<T> ret = new ArrayList<T>();
     for (PluginHolder pluginHolder : plugins) {
-      if (pluginHolder.getInstance() != null && type.isAssignableFrom(pluginHolder.getInstance().getClass())) {
+      if (pluginHolder.getInstance() != null
+          && type.isAssignableFrom(pluginHolder.getInstance().getClass())) {
         ret.add((T) pluginHolder.getInstance());
       }
     }
     return ret;
   }
-  
-  public <T> Map<String,T> getNamedBeansByType(Class<T> type) {
+
+  @SuppressWarnings("unchecked")
+  public <T> Map<String, T> getNamedBeansByType(Class<T> type) {
     Map<String, T> ret = new HashMap<String, T>();
     for (PluginHolder pluginHolder : plugins) {
-      if (pluginHolder.getInstance() != null && type.isAssignableFrom(pluginHolder.getInstance().getClass())) {
+      if (pluginHolder.getInstance() != null
+          && type.isAssignableFrom(pluginHolder.getInstance().getClass())) {
         ret.put(pluginHolder.pluginName, (T) pluginHolder.getInstance());
       }
     }
@@ -120,30 +125,34 @@ public class SenseiPluginRegistry {
     }
     return ret;
   }
+
   public FacetHandler<?> getFacet(String name) {
     for (Object handlerObject : resolveBeansByListKey(FACET_CONF_PREFIX, Object.class)) {
       if (!(handlerObject instanceof FacetHandler)) {
         continue;
       }
-      FacetHandler handler = (FacetHandler) handlerObject;
+      FacetHandler<?> handler = (FacetHandler<?>) handlerObject;
       if (handler.getName().equals(name)) {
         return handler;
       }
     }
     return null;
   }
-  public RuntimeFacetHandlerFactory getRuntimeFacet(String name) {
+
+  public RuntimeFacetHandlerFactory<?,?> getRuntimeFacet(String name) {
     for (Object handlerObject : resolveBeansByListKey(FACET_CONF_PREFIX, Object.class)) {
       if (!(handlerObject instanceof RuntimeFacetHandlerFactory)) {
         continue;
       }
-      RuntimeFacetHandlerFactory handler = (RuntimeFacetHandlerFactory) handlerObject;
+      RuntimeFacetHandlerFactory<?,?> handler = (RuntimeFacetHandlerFactory<?,?>) handlerObject;
       if (handler.getName().equals(name)) {
         return handler;
       }
     }
     return null;
   }
+
+  @SuppressWarnings("unchecked")
   public <T> T getBeanByFullPrefix(String fullPrefix, Class<T> type) {
     PluginHolder holder = pluginsByPrefix.get(fullPrefix);
     if (holder == null) {
@@ -152,6 +161,7 @@ public class SenseiPluginRegistry {
     return (T) holder.getInstance();
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public <T> List<T> resolveBeansByListKey(String paramKey, Class<T> returnedClass) {
     if (!paramKey.endsWith(".list")) {
       paramKey = paramKey + ".list";
@@ -208,6 +218,7 @@ public class SenseiPluginRegistry {
     cachedRegistries.remove(configuration);
     configuration = null;
   }
+
   public Configuration getConfiguration() {
     return configuration;
   }

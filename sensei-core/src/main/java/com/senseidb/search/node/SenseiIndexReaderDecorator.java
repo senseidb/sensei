@@ -1,60 +1,52 @@
 package com.senseidb.search.node;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-import org.apache.lucene.index.IndexReader;
-
-import proj.zoie.api.ZoieIndexReader;
+import proj.zoie.api.ZoieSegmentReader;
 import proj.zoie.impl.indexing.AbstractIndexReaderDecorator;
 
-import com.browseengine.bobo.api.BoboIndexReader;
+import com.browseengine.bobo.api.BoboSegmentReader;
 import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.RuntimeFacetHandlerFactory;
 
-public class SenseiIndexReaderDecorator extends AbstractIndexReaderDecorator<BoboIndexReader> {
-    private final List<FacetHandler<?>> _facetHandlers;
-    private static final Logger logger = Logger.getLogger(SenseiIndexReaderDecorator.class);
-    private final List<RuntimeFacetHandlerFactory<?, ?>> _facetHandlerFactories;
-    
-    public SenseiIndexReaderDecorator(List<FacetHandler<?>> facetHandlers, List<RuntimeFacetHandlerFactory<?, ?>> facetHandlerFactories) {
-        _facetHandlers = facetHandlers;
-        _facetHandlerFactories = facetHandlerFactories;
-    }
+public class SenseiIndexReaderDecorator extends AbstractIndexReaderDecorator<BoboSegmentReader> {
+  private final List<FacetHandler<?>> _facetHandlers;
+  private final List<RuntimeFacetHandlerFactory<?, ?>> _facetHandlerFactories;
 
-    public SenseiIndexReaderDecorator() {
-        this(null, null);
-    }
+  public SenseiIndexReaderDecorator(List<FacetHandler<?>> facetHandlers,
+      List<RuntimeFacetHandlerFactory<?, ?>> facetHandlerFactories) {
+    _facetHandlers = facetHandlers;
+    _facetHandlerFactories = facetHandlerFactories;
+  }
 
-    public List<FacetHandler<?>> getFacetHandlerList() {
-        return _facetHandlers;
-    }
+  public SenseiIndexReaderDecorator() {
+    this(null, null);
+  }
 
-    public List<RuntimeFacetHandlerFactory<?, ?>> getFacetHandlerFactories() {
-        return _facetHandlerFactories;
-    }
+  public List<FacetHandler<?>> getFacetHandlerList() {
+    return _facetHandlers;
+  }
 
-    public BoboIndexReader decorate(ZoieIndexReader<BoboIndexReader> zoieReader) throws IOException {
-        BoboIndexReader boboReader = null;
-        if (zoieReader != null) {
-            boboReader = BoboIndexReader.getInstanceAsSubReader(zoieReader, _facetHandlers, _facetHandlerFactories);
-        }
-       
-        return boboReader;
-    }
+  public List<RuntimeFacetHandlerFactory<?, ?>> getFacetHandlerFactories() {
+    return _facetHandlerFactories;
+  }
 
-    
-    @Override
-    public BoboIndexReader redecorate(BoboIndexReader reader, ZoieIndexReader<BoboIndexReader> newReader, boolean withDeletes)
-            throws IOException {
-        return reader.copy(newReader);
+  @Override
+  public BoboSegmentReader decorate(ZoieSegmentReader<BoboSegmentReader> zoieReader)
+      throws IOException {
+    BoboSegmentReader boboReader = null;
+    if (zoieReader != null) {
+      boboReader = BoboSegmentReader
+          .getInstance(zoieReader, _facetHandlers, _facetHandlerFactories);
     }
+    return boboReader;
+  }
 
-   
+  @Override
+  public BoboSegmentReader redecorate(BoboSegmentReader reader,
+      ZoieSegmentReader<BoboSegmentReader> newReader) throws IOException {
+    return reader.copy(newReader);
+  }
 
 }
-
-

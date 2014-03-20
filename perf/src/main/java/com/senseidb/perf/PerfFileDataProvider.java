@@ -18,12 +18,9 @@ public class PerfFileDataProvider extends LinedJsonFileDataProvider {
 
   public PerfFileDataProvider(Comparator<String> versionComparator, File file, long startingOffset, LinkedBlockingQueue<JSONObject> queue) {
     super(versionComparator, file, startingOffset);
-    this.queue = queue; 
+    PerfFileDataProvider.queue = queue;
   }
-  
- 
-  
-  
+
   @Override
   public DataEvent<JSONObject> next() {
     JSONObject object = null;
@@ -32,16 +29,16 @@ public class PerfFileDataProvider extends LinedJsonFileDataProvider {
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
-    }    
-    if (_offset % 10000 == 0) {
+    }
+    if (_offset % 20000 == 0) {
       System.out.println("Indexed " + _offset + " documents. Queue size = " + queue.size());
     }
     if (object != null) {
       return new DataEvent<JSONObject>(object, String.valueOf(_offset++));
     }
-    
+
     return super.next();
   }
 
- 
+
 }

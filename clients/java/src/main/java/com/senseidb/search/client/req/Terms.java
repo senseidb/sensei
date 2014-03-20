@@ -3,7 +3,6 @@ package com.senseidb.search.client.req;
 import java.util.List;
 
 import com.senseidb.search.client.json.JsonField;
-import com.senseidb.search.client.req.query.Query;
 
 /**
  * <p>
@@ -41,7 +40,8 @@ public class Terms extends Selection {
     this.operator = op;
   }
 
-  public Terms(List<String> values, List<String> excludes, Operator op, int minimumMatch, double boost) {
+  public Terms(List<String> values, List<String> excludes, Operator op, int minimumMatch,
+      double boost) {
     super();
     this.values = values;
     this.excludes = excludes;
@@ -61,6 +61,5 @@ public class Terms extends Selection {
   public Operator getOperator() {
     return operator;
   }
-  
 
 }

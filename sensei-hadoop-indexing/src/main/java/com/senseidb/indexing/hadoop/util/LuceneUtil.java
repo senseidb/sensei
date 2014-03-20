@@ -42,8 +42,7 @@ public final class LuceneUtil {
    * @return true if the file is a segments_N file
    */
   public static boolean isSegmentsFile(String name) {
-    return name.startsWith(IndexFileNames.SEGMENTS)
-        && !name.equals(IndexFileNames.SEGMENTS_GEN);
+    return name.startsWith(IndexFileNames.SEGMENTS) && !name.equals(IndexFileNames.SEGMENTS_GEN);
   }
 
   /**
@@ -60,12 +59,10 @@ public final class LuceneUtil {
    * 
    * @param directory -- directory to search for the latest segments_N file
    */
-  public static long getCurrentSegmentGeneration(Directory directory)
-      throws IOException {
+  public static long getCurrentSegmentGeneration(Directory directory) throws IOException {
     String[] files = directory.listAll();
-    if (files == null)
-      throw new IOException("cannot read directory " + directory
-          + ": list() returned null");
+    if (files == null) throw new IOException("cannot read directory " + directory
+        + ": list() returned null");
     return getCurrentSegmentGeneration(files);
   }
 
@@ -82,8 +79,7 @@ public final class LuceneUtil {
     long max = -1;
     for (int i = 0; i < files.length; i++) {
       String file = files[i];
-      if (file.startsWith(IndexFileNames.SEGMENTS)
-          && !file.equals(IndexFileNames.SEGMENTS_GEN)) {
+      if (file.startsWith(IndexFileNames.SEGMENTS) && !file.equals(IndexFileNames.SEGMENTS_GEN)) {
         long gen = generationFromSegmentsFileName(file);
         if (gen > max) {
           max = gen;
@@ -100,12 +96,10 @@ public final class LuceneUtil {
     if (fileName.equals(IndexFileNames.SEGMENTS)) {
       return 0;
     } else if (fileName.startsWith(IndexFileNames.SEGMENTS)) {
-      return Long.parseLong(
-          fileName.substring(1 + IndexFileNames.SEGMENTS.length()),
-          Character.MAX_RADIX);
+      return Long.parseLong(fileName.substring(1 + IndexFileNames.SEGMENTS.length()),
+        Character.MAX_RADIX);
     } else {
-      throw new IllegalArgumentException("fileName \"" + fileName
-          + "\" is not a segments file");
+      throw new IllegalArgumentException("fileName \"" + fileName + "\" is not a segments file");
     }
   }
 

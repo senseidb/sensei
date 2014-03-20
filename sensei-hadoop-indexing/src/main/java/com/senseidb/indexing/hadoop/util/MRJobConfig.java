@@ -17,7 +17,6 @@
  */
 package com.senseidb.indexing.hadoop.util;
 
-
 public interface MRJobConfig {
 
   // Put all of the attribute names in here so that Job and JobContext are
@@ -100,7 +99,8 @@ public interface MRJobConfig {
 
   public static final String CACHE_ARCHIVES = "mapreduce.job.cache.archives";
 
-  public static final String CACHE_FILES_SIZES = "mapreduce.job.cache.files.filesizes"; // internal use only
+  public static final String CACHE_FILES_SIZES = "mapreduce.job.cache.files.filesizes"; // internal
+                                                                                        // use only
 
   public static final String CACHE_ARCHIVES_SIZES = "mapreduce.job.cache.archives.filesizes"; // ditto
 
@@ -267,10 +267,8 @@ public interface MRJobConfig {
   public static final String JOB_ACL_VIEW_JOB = "mapreduce.job.acl-view-job";
 
   public static final String JOB_ACL_MODIFY_JOB = "mapreduce.job.acl-modify-job";
-  public static final String JOB_SUBMITHOST =
-    "mapreduce.job.submithostname";
-  public static final String JOB_SUBMITHOSTADDR =
-    "mapreduce.job.submithostaddress";
+  public static final String JOB_SUBMITHOST = "mapreduce.job.submithostname";
+  public static final String JOB_SUBMITHOSTADDR = "mapreduce.job.submithostaddress";
 
   public static final String COUNTERS_MAX_KEY = "mapreduce.job.counters.max";
   public static final int COUNTERS_MAX_DEFAULT = 120;

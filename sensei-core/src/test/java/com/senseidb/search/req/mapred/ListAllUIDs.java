@@ -6,16 +6,22 @@ import java.util.List;
 
 import org.json.JSONObject;
 
-public class ListAllUIDs implements SenseiMapReduce<Serializable, Serializable>{
+public class ListAllUIDs implements SenseiMapReduce<Serializable, Serializable> {
+
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
 
   @Override
   public void init(JSONObject params) {
     // TODO Auto-generated method stub
-    
+
   }
 
   @Override
-  public Serializable map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor, FacetCountAccessor facetCountAccessor) {
+  public Serializable map(IntArray docIds, int docIdCount, long[] uids, FieldAccessor accessor,
+      FacetCountAccessor facetCountAccessor) {
     ArrayList<Long> collectedUids = new ArrayList<Long>(docIdCount);
     for (int i = 0; i < docIdCount; i++) {
       collectedUids.add(uids[docIds.get(i)]);

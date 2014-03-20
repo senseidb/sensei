@@ -9,7 +9,7 @@ public enum CombinerStage {
   /**
    * After partition was processed
    */
-  partitionLevel, 
+  partitionLevel,
   /**
    * On the node level
    */

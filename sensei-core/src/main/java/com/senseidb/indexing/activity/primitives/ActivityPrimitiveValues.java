@@ -23,7 +23,6 @@ public abstract class ActivityPrimitiveValues implements ActivityValues {
   protected volatile UpdateBatch<AtomicFieldUpdate> updateBatch;
   private ActivityConfig activityConfig;
 
-
   public ActivityPrimitiveValues() {
     super();
   }
@@ -37,7 +36,7 @@ public abstract class ActivityPrimitiveValues implements ActivityValues {
   @Override
   public Runnable prepareFlush() {
     if (activityFieldStore == null) {
-      return new Runnable() {        
+      return new Runnable() {
         public void run() {
         }
       };
@@ -80,29 +79,33 @@ public abstract class ActivityPrimitiveValues implements ActivityValues {
   public abstract void initFieldValues(int count, MappedByteBuffer buffer);
 
   public abstract int getFieldSizeInBytes();
+
   public abstract Number getValue(int index);
-  
-  public static ActivityPrimitiveValues createActivityPrimitiveValues(ActivityPersistenceFactory activityPersistenceFactory,
-      SenseiSchema.FieldDefinition field, int count) {
+
+  public static ActivityPrimitiveValues createActivityPrimitiveValues(
+      ActivityPersistenceFactory activityPersistenceFactory, SenseiSchema.FieldDefinition field,
+      int count) {
     return createActivityPrimitiveValues(activityPersistenceFactory, field.type, field.name, count);
   }
 
-  public static ActivityPrimitiveValues createActivityPrimitiveValues(ActivityPersistenceFactory activityPersistenceFactory, Class<?> type,
-      String fieldName, int count) {
+  public static ActivityPrimitiveValues createActivityPrimitiveValues(
+      ActivityPersistenceFactory activityPersistenceFactory, Class<?> type, String fieldName,
+      int count) {
     ActivityPrimitiveValues values = null;
     if (type == int.class) {
       values = new ActivityIntValues();
     } else if (type == float.class || type == double.class) {
       values = new ActivityFloatValues();
     } else if (type == long.class) {
-        values = new ActivityLongValues();
-      } else
-      throw new UnsupportedOperationException("Class " + type + " is not supported");
-    ActivityPrimitivesStorage primitivesStorage = activityPersistenceFactory.getActivivityPrimitivesStorage(fieldName);
+      values = new ActivityLongValues();
+    } else throw new UnsupportedOperationException("Class " + type + " is not supported");
+    ActivityPrimitivesStorage primitivesStorage = activityPersistenceFactory
+        .getActivivityPrimitivesStorage(fieldName);
     values.fieldName = fieldName;
 
     values.activityConfig = activityPersistenceFactory.getActivityConfig();
-    values.updateBatch = new UpdateBatch<AtomicFieldUpdate>(activityPersistenceFactory.getActivityConfig());
+    values.updateBatch = new UpdateBatch<AtomicFieldUpdate>(
+        activityPersistenceFactory.getActivityConfig());
 
     if (primitivesStorage != null) {
       primitivesStorage.initActivityDataFromFile(values, count);
@@ -111,5 +114,5 @@ public abstract class ActivityPrimitiveValues implements ActivityValues {
     }
     return values;
   }
-  
+
 }

@@ -29,25 +29,31 @@ public class AggregatesUpdateJob implements Runnable {
   private final TimeAggregatedActivityValues timeAggregatedActivityValues;
   private final AggregatesMetadata aggregatesMetadata;
   private int currentCount;
-  private static Timer timer = Metrics.newTimer(new MetricName(MetricsConstants.Domain,"timer","updateJob-time","agregatesUpdateJob"), TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
-  
-  public AggregatesUpdateJob(TimeAggregatedActivityValues timeAggregatedActivityValues, AggregatesMetadata aggregatesMetadata) {
+  private static Timer timer = Metrics.newTimer(new MetricName(MetricsConstants.Domain, "timer",
+      "updateJob-time", "agregatesUpdateJob"), TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+
+  public AggregatesUpdateJob(TimeAggregatedActivityValues timeAggregatedActivityValues,
+      AggregatesMetadata aggregatesMetadata) {
     this.timeAggregatedActivityValues = timeAggregatedActivityValues;
     this.aggregatesMetadata = aggregatesMetadata;
   }
+
   public void start() {
-    executorService.scheduleAtFixedRate(this, 30, 30, TimeUnit.SECONDS);    
+    executorService.scheduleAtFixedRate(this, 30, 30, TimeUnit.SECONDS);
   }
+
   public void stop() {
-    executorService.shutdown();    
+    executorService.shutdown();
   }
-  public void awaitTermination() {    
+
+  public void awaitTermination() {
     try {
       executorService.awaitTermination(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
   }
+
   @Override
   public synchronized void run() {
     try {
@@ -61,14 +67,16 @@ public class AggregatesUpdateJob implements Runnable {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    
+
   }
+
   public void runUpdateJob() {
     int currentTime = Clock.getCurrentTimeInMinutes();
     if (currentTime <= aggregatesMetadata.getLastUpdatedTime()) {
       return;
     }
-    currentCount = 0;;
+    currentCount = 0;
+    ;
     for (int i = 0; i <= timeAggregatedActivityValues.maxIndex; i++) {
       synchronized (timeAggregatedActivityValues.timeActivities.getLock(i)) {
         if (!timeAggregatedActivityValues.timeActivities.isSet(i)) {
@@ -77,19 +85,23 @@ public class AggregatesUpdateJob implements Runnable {
         IntContainer activities = timeAggregatedActivityValues.timeActivities.getActivities(i);
         IntContainer times = timeAggregatedActivityValues.timeActivities.getTimes(i);
         int[] updateTempValues = new int[timeAggregatedActivityValues.intActivityValues.length];
-        updateActivityValues(timeAggregatedActivityValues.intActivityValues, activities, times, currentTime, i, updateTempValues);        
-      }      
-    }    
+        updateActivityValues(timeAggregatedActivityValues.intActivityValues, activities, times,
+          currentTime, i, updateTempValues);
+      }
+    }
     aggregatesMetadata.updateTime(currentTime);
     logger.info("Finished the AggregatesUpdateJob. Updated " + currentCount + " records");
   }
- 
-  private final void updateActivityValues(IntValueHolder[] intActivityValues, IntContainer activities, IntContainer times, int currentTime, int index, int[] updateTempValues) {       
+
+  private final void updateActivityValues(IntValueHolder[] intActivityValues,
+      IntContainer activities, IntContainer times, int currentTime, int index,
+      int[] updateTempValues) {
     int minimumAggregateIndex = 0;
-    for (int activityIndex = 0; activityIndex < activities.getSize(); activityIndex++) { 
-      //the activity is current. As they are sorted in the ascending order, we can stop now
+    for (int activityIndex = 0; activityIndex < activities.getSize(); activityIndex++) {
+      // the activity is current. As they are sorted in the ascending order, we can stop now
       if (times.size() != activities.size()) {
-        throw new IllegalStateException("activities.size = " + activities.getSize() + ", times.size() = " + times.size());
+        throw new IllegalStateException("activities.size = " + activities.getSize()
+            + ", times.size() = " + times.size());
       }
       if (times.size() == 0) {
         continue;
@@ -98,17 +110,19 @@ public class AggregatesUpdateJob implements Runnable {
         break;
       }
       for (int aggregateIndex = intActivityValues.length - 1; aggregateIndex >= minimumAggregateIndex; aggregateIndex--) {
-        IntValueHolder intValueHolder = intActivityValues[aggregateIndex];        
+        IntValueHolder intValueHolder = intActivityValues[aggregateIndex];
         int currentElapsedTime = currentTime - times.get(activityIndex);
-        //activity is current 
+        // activity is current
         if (currentElapsedTime < intValueHolder.timeInMinutes) {
           minimumAggregateIndex = aggregateIndex + 1;
           break;
         }
-        int previousElapsedTime = aggregatesMetadata.getLastUpdatedTime() - times.get(activityIndex);
-        //activity is not current against the current time, but was current for the previous run
-        if (currentElapsedTime >= intValueHolder.timeInMinutes && previousElapsedTime < intValueHolder.timeInMinutes) {
-          int activityValue = activities.get(activityIndex); 
+        int previousElapsedTime = aggregatesMetadata.getLastUpdatedTime()
+            - times.get(activityIndex);
+        // activity is not current against the current time, but was current for the previous run
+        if (currentElapsedTime >= intValueHolder.timeInMinutes
+            && previousElapsedTime < intValueHolder.timeInMinutes) {
+          int activityValue = activities.get(activityIndex);
           if (activityValue != 0) {
             updateTempValues[aggregateIndex] += activityValue;
             currentCount++;
@@ -120,12 +134,13 @@ public class AggregatesUpdateJob implements Runnable {
       int updateValue = updateTempValues[i];
       if (updateValue != 0) {
         synchronized (intActivityValues[i].activityIntValues.getFieldValues()) {
-         intActivityValues[i].activityIntValues.update(index, updateValue > 0 ? String.valueOf(-updateValue) : "+" + String.valueOf(updateValue));
-       }
-       updateTempValues[i] = 0;
+          intActivityValues[i].activityIntValues.update(index,
+            updateValue > 0 ? String.valueOf(-updateValue) : "+" + String.valueOf(updateValue));
+        }
+        updateTempValues[i] = 0;
       }
     }
-    //remove outdated activities
+    // remove outdated activities
     while (true) {
       if (times.size() == 0) {
         break;

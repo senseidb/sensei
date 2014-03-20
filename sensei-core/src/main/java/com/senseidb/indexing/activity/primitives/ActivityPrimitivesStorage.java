@@ -24,7 +24,7 @@ import com.yammer.metrics.core.Timer;
  */
 public class ActivityPrimitivesStorage {
   public static final double INIT_GROWTH_RATIO = 1.5;
-  //public static final int BYTES_IN_INT = 4;
+  // public static final int BYTES_IN_INT = 4;
   public static final int LENGTH_THRESHOLD = 1000000;
   public static final int FILE_GROWTH_RATIO = 2;
   public static final int INITIAL_FILE_LENGTH = 2000000;
@@ -34,16 +34,18 @@ public class ActivityPrimitivesStorage {
   private final String indexDir;
   private volatile boolean closed = false;
   private MappedByteBuffer buffer;
-  private long fileLength; 
+  private long fileLength;
   private boolean activateMemoryMappedBuffers = true;
   private static Timer timer;
   private String fileName;
-  
+
   public ActivityPrimitivesStorage(String fieldName, String indexDir) {
     this.fieldName = fieldName;
     this.indexDir = indexDir;
-    timer = Metrics.newTimer(new MetricName(MetricsConstants.Domain,"timer","initIntActivities-time-" + fieldName.replaceAll(":", "-"),"initIntActivities"), TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
-   
+    timer = Metrics.newTimer(new MetricName(MetricsConstants.Domain, "timer",
+        "initIntActivities-time-" + fieldName.replaceAll(":", "-"), "initIntActivities"),
+      TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+
   }
 
   public synchronized void init() {
@@ -56,8 +58,8 @@ public class ActivityPrimitivesStorage {
       storedFile = new RandomAccessFile(file, "rw");
       fileLength = storedFile.length();
       if (activateMemoryMappedBuffers) {
-        buffer = storedFile.getChannel().map(MapMode.READ_WRITE, 0, file.length());     
-      } 
+        buffer = storedFile.getChannel().map(MapMode.READ_WRITE, 0, file.length());
+      }
     } catch (IOException e) {
       logger.error(e.getMessage(), e);
       throw new RuntimeException(e);
@@ -65,25 +67,26 @@ public class ActivityPrimitivesStorage {
   }
 
   public synchronized void flush(List<AtomicFieldUpdate> updates) {
-    Assert.state(storedFile != null, "The FileStorage is not initialized");    
+    Assert.state(storedFile != null, "The FileStorage is not initialized");
     try {
-      for (AtomicFieldUpdate update : updates) {       
-         ensureCapacity((update.index + 1) * update.getFieldSizeInBytes());        
-         if (activateMemoryMappedBuffers) {
-           update.update(buffer, update.index * update.getFieldSizeInBytes());          
-         } else {  
-           update.update(storedFile, update.index * update.getFieldSizeInBytes());
-         }
+      for (AtomicFieldUpdate update : updates) {
+        ensureCapacity((update.index + 1) * update.getFieldSizeInBytes());
+        if (activateMemoryMappedBuffers) {
+          update.update(buffer, update.index * update.getFieldSizeInBytes());
+        } else {
+          update.update(storedFile, update.index * update.getFieldSizeInBytes());
+        }
       }
       if (activateMemoryMappedBuffers) {
         buffer.force();
       }
-      storedFile.getFD().sync(); 
-     
+      storedFile.getFD().sync();
+
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
+
   private void ensureCapacity(int i) {
     try {
       if (fileLength > i + 100) {
@@ -103,6 +106,7 @@ public class ActivityPrimitivesStorage {
       throw new RuntimeException(e);
     }
   }
+
   public synchronized void close() {
     try {
       if (activateMemoryMappedBuffers) {
@@ -115,12 +119,13 @@ public class ActivityPrimitivesStorage {
     }
   }
 
-  protected  void initActivityDataFromFile(final ActivityPrimitiveValues activityPrimitiveValues, final int count) {
+  protected void initActivityDataFromFile(final ActivityPrimitiveValues activityPrimitiveValues,
+      final int count) {
     try {
       timer.time(new Callable<ActivityPrimitiveValues>() {
         @Override
         public ActivityPrimitiveValues call() throws Exception {
-          Assert.state(storedFile != null, "The FileStorage is not initialized");        
+          Assert.state(storedFile != null, "The FileStorage is not initialized");
           activityPrimitiveValues.activityFieldStore = ActivityPrimitivesStorage.this;
           activityPrimitiveValues.fieldName = fieldName;
           try {
@@ -130,7 +135,9 @@ public class ActivityPrimitivesStorage {
             }
             activityPrimitiveValues.init((int) (count * INIT_GROWTH_RATIO));
             if (fileLength < count * activityPrimitiveValues.getFieldSizeInBytes()) {
-              logger.warn("The  activityIndex is corrupted. The file "+ fieldName +" contains " + (fileLength / activityPrimitiveValues.getFieldSizeInBytes()) + " records, while metadata has a bigger number " + count);
+              logger.warn("The  activityIndex is corrupted. The file " + fieldName + " contains "
+                  + (fileLength / activityPrimitiveValues.getFieldSizeInBytes())
+                  + " records, while metadata has a bigger number " + count);
               logger.warn("adding extra space");
               ensureCapacity(count * activityPrimitiveValues.getFieldSizeInBytes());
             }
@@ -139,7 +146,7 @@ public class ActivityPrimitivesStorage {
             } else {
               activityPrimitiveValues.initFieldValues(count, storedFile);
             }
-            
+
           } catch (Exception e) {
             throw new RuntimeException(e);
           }
@@ -149,12 +156,11 @@ public class ActivityPrimitivesStorage {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    
+
   }
-  
+
   public boolean isClosed() {
     return closed;
-  }  
+  }
 
-  
 }

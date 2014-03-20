@@ -6,13 +6,13 @@ import org.json.JSONObject;
 import com.senseidb.search.client.json.JsonHandler;
 import com.senseidb.search.client.json.JsonSerializer;
 
-public class RelevanceValuesHandler implements JsonHandler<RelevanceValues>{
+public class RelevanceValuesHandler implements JsonHandler<RelevanceValues> {
 
   @Override
   public JSONObject serialize(RelevanceValues bean) throws JSONException {
-   if (bean == null) {
-     return null;
-   }
+    if (bean == null) {
+      return null;
+    }
     return (JSONObject) JsonSerializer.serialize(bean.values);
   }
 

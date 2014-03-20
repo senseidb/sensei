@@ -33,29 +33,31 @@ public class MapReduceRegistry {
     keyToFunction.put("sensei.count", CountMapReduce.class);
     keyToFunction.put("sensei.composite", CompositeMapReduce.class);
   }
-  
 
   public static void register(String mapReduceKey, Class<? extends SenseiMapReduce> mapReduceClass) {
     keyToFunction.put(mapReduceKey, mapReduceClass);
   }
+
   public static boolean contains(String column) {
     return keyToFunction.containsKey(column);
   }
+
+  @SuppressWarnings("unchecked")
   public static SenseiMapReduce get(String mapReduceKey) {
     try {
-    Class<? extends SenseiMapReduce>  cls = keyToFunction.get(mapReduceKey);
-    if (cls != null) {
-      return (SenseiMapReduce) cls.newInstance();
-    }
-    if (!mapReduceKey.contains(".")) {
-      cls = keyToFunction.get("sensei." + mapReduceKey);
-    }
-    if (cls != null) {
-      return (SenseiMapReduce) cls.newInstance();
-    }
-    cls = (Class<? extends SenseiMapReduce>) Class.forName(mapReduceKey);
-    keyToFunction.put(mapReduceKey,  cls);   
-    return  cls.newInstance();
+      Class<? extends SenseiMapReduce> cls = keyToFunction.get(mapReduceKey);
+      if (cls != null) {
+        return cls.newInstance();
+      }
+      if (!mapReduceKey.contains(".")) {
+        cls = keyToFunction.get("sensei." + mapReduceKey);
+      }
+      if (cls != null) {
+        return cls.newInstance();
+      }
+      cls = (Class<? extends SenseiMapReduce>) Class.forName(mapReduceKey);
+      keyToFunction.put(mapReduceKey, cls);
+      return cls.newInstance();
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }

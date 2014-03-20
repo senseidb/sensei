@@ -4,17 +4,19 @@ import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.management.MBeanServer;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.MapConfiguration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.document.StoredField;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
@@ -23,17 +25,15 @@ import org.apache.lucene.util.Version;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import proj.zoie.api.ZoieIndexReader;
 import proj.zoie.api.ZoieMultiReader;
 import proj.zoie.api.ZoieSegmentReader;
 import proj.zoie.api.indexing.AbstractZoieIndexable;
 import proj.zoie.api.indexing.ZoieIndexable;
 import proj.zoie.impl.indexing.ZoieConfig;
 
-import com.browseengine.bobo.api.BoboIndexReader;
+import com.browseengine.bobo.api.BoboSegmentReader;
 import com.browseengine.bobo.facets.FacetHandler;
 import com.browseengine.bobo.facets.RuntimeFacetHandlerFactory;
-import com.senseidb.conf.SenseiConfParams;
 import com.senseidb.conf.SenseiFacetHandlerBuilder;
 import com.senseidb.conf.SenseiSchema;
 import com.senseidb.conf.SenseiServerBuilder;
@@ -71,21 +71,24 @@ public class InMemorySenseiService {
       runtimeFacets = new ArrayList<RuntimeFacetHandlerFactory<?, ?>>();
 
       ShardingStrategy strategy = new ShardingStrategy() {
+        @Override
         public int caculateShard(int maxShardId, JSONObject dataObj) throws JSONException {
           return 0;
         }
       };
-      ActivityPersistenceFactory.setOverrideForCurrentThread(ActivityPersistenceFactory.getInMemoryInstance());
+      ActivityPersistenceFactory.setOverrideForCurrentThread(ActivityPersistenceFactory
+          .getInMemoryInstance());
       pluggableSearchEngineManager = new PluggableSearchEngineManager();
-      pluggableSearchEngineManager.init("", 0, schema, ZoieConfig.DEFAULT_VERSION_COMPARATOR, pluginRegistry, strategy);
-      senseiSystemInfo = SenseiFacetHandlerBuilder.buildFacets(schema.getSchemaObj(), pluginRegistry, facets, runtimeFacets,
-          pluggableSearchEngineManager);
+      pluggableSearchEngineManager.init("", 0, schema, ZoieConfig.DEFAULT_VERSION_COMPARATOR,
+        pluginRegistry, strategy);
+      senseiSystemInfo = SenseiFacetHandlerBuilder.buildFacets(schema.getSchemaObj(),
+        pluginRegistry, facets, runtimeFacets, pluggableSearchEngineManager);
 
       int[] partitions = new int[] { 0 };
-       senseiIndexReaderDecorator = new SenseiIndexReaderDecorator(facets, runtimeFacets);
+      senseiIndexReaderDecorator = new SenseiIndexReaderDecorator(facets, runtimeFacets);
       mockSenseiCore = new MockSenseiCore(partitions, senseiIndexReaderDecorator);
       pluggableSearchEngineManager.start(mockSenseiCore);
-      coreSenseiServiceImpl = new CoreSenseiServiceImpl(mockSenseiCore);
+      coreSenseiServiceImpl = new CoreSenseiServiceImpl(mockSenseiCore, new MapConfiguration(new HashMap<String, Object>()));
     } catch (Exception e) {
       throw new RuntimeException(e);
     } finally {
@@ -99,8 +102,7 @@ public class InMemorySenseiService {
     try {
       writer.deleteAll();
       for (JSONObject doc : documents) {
-        if (doc == null)
-          continue;
+        if (doc == null) continue;
         writer.addDocument(buildDoc(doc));
         pluggableSearchEngineManager.update(doc, "");
       }
@@ -117,11 +119,12 @@ public class InMemorySenseiService {
     IndexWriter writer = null;
     try {
       directory = new RAMDirectory();
-      writer = new IndexWriter(directory, new IndexWriterConfig(Version.LUCENE_35, new StandardAnalyzer(Version.LUCENE_35)));
+      writer = new IndexWriter(directory, new IndexWriterConfig(Version.LUCENE_43,
+          new StandardAnalyzer(Version.LUCENE_43)));
       addDocuments(directory, writer, documents);
-      ZoieIndexReader<BoboIndexReader> zoieMultiReader = new ZoieMultiReader<BoboIndexReader>(IndexReader.open(directory),
-          new SenseiIndexReaderDecorator(facets, runtimeFacets));
-      MockIndexReaderFactory mockIndexReaderFactory = new MockIndexReaderFactory<ZoieIndexReader<BoboIndexReader>>(
+      ZoieMultiReader<BoboSegmentReader> zoieMultiReader = new ZoieMultiReader<BoboSegmentReader>(
+          DirectoryReader.open(directory), new SenseiIndexReaderDecorator(facets, runtimeFacets));
+      MockIndexReaderFactory mockIndexReaderFactory = new MockIndexReaderFactory(
           Arrays.asList(zoieMultiReader));
       mockSenseiCore.setIndexReaderFactory(mockIndexReaderFactory);
       SenseiResult result = coreSenseiServiceImpl.execute(senseiRequest);
@@ -146,7 +149,7 @@ public class InMemorySenseiService {
   public Document buildDoc(JSONObject json) {
     ZoieIndexable indexable = defaultJsonSchemaInterpreter.convertAndInterpret(json);
     Document ret = indexable.buildIndexingReqs()[0].getDocument();
-    ret.add(new Field(AbstractZoieIndexable.DOCUMENT_STORE_FIELD, indexable.getStoreValue()));
+    ret.add(new StoredField(AbstractZoieIndexable.DOCUMENT_STORE_FIELD, indexable.getStoreValue()));
     ZoieSegmentReader.fillDocumentID(ret, indexable.getUID());
     return ret;
   }
@@ -156,12 +159,14 @@ public class InMemorySenseiService {
       JSONObject schema = SenseiServerBuilder.loadSchema(confDir);
       File senseiConfFile = new File(confDir, SenseiServerBuilder.SENSEI_PROPERTIES);
       if (!senseiConfFile.exists()) {
-        throw new ConfigurationException("configuration file: " + senseiConfFile.getAbsolutePath() + " does not exist.");
+        throw new ConfigurationException("configuration file: " + senseiConfFile.getAbsolutePath()
+            + " does not exist.");
       }
       Configuration senseiConf = new PropertiesConfiguration();
       ((PropertiesConfiguration) senseiConf).setDelimiterParsingDisabled(true);
       ((PropertiesConfiguration) senseiConf).load(senseiConfFile);
-      return new InMemorySenseiService(SenseiSchema.build(schema), SenseiPluginRegistry.build(senseiConf));
+      return new InMemorySenseiService(SenseiSchema.build(schema),
+          SenseiPluginRegistry.build(senseiConf));
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }

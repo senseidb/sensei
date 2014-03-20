@@ -13,22 +13,23 @@ public class AvroDataSourceFilter<D> extends DataSourceFilter<DataPacket> {
   private BinaryDecoder binDecoder;
   private final SpecificDatumReader<D> reader;
   private final DataSourceFilter<D> _dataMapper;
-  
-  public AvroDataSourceFilter(Class<D> cls,DataSourceFilter<D> dataMapper){
+
+  public AvroDataSourceFilter(Class<D> cls, DataSourceFilter<D> dataMapper) {
     _cls = cls;
     binDecoder = null;
     reader = new SpecificDatumReader<D>(_cls);
     _dataMapper = dataMapper;
-    if (_dataMapper == null){
+    if (_dataMapper == null) {
       throw new IllegalArgumentException("source filter is null");
     }
   }
-  
+
   @Override
   protected JSONObject doFilter(DataPacket packet) throws Exception {
-    binDecoder = DecoderFactory.defaultFactory().createBinaryDecoder(packet.data,packet.offset,packet.size, binDecoder);
+    binDecoder = DecoderFactory.defaultFactory().createBinaryDecoder(packet.data, packet.offset,
+      packet.size, binDecoder);
     D avroObj = _cls.newInstance();
-    reader.read(avroObj,binDecoder);
+    reader.read(avroObj, binDecoder);
     return _dataMapper.filter(avroObj);
   }
 }

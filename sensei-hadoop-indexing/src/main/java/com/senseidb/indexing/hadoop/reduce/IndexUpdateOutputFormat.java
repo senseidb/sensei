@@ -35,30 +35,32 @@ import com.senseidb.indexing.hadoop.keyvalueformat.Shard;
  * The record writer of this output format simply puts a message in an output
  * path when a shard update is done.
  */
+@SuppressWarnings("deprecation")
 public class IndexUpdateOutputFormat extends FileOutputFormat<Shard, Text> {
 
   static final Text DONE = new Text("done");
-	
-  public RecordWriter<Shard, Text> getRecordWriter(final FileSystem fs,
-      JobConf job, String name, final Progressable progress)
-      throws IOException {
+
+  @Override
+  public RecordWriter<Shard, Text> getRecordWriter(final FileSystem fs, JobConf job, String name,
+      final Progressable progress) throws IOException {
 
     final Path perm = new Path(getWorkOutputPath(job), name);
 
     return new RecordWriter<Shard, Text>() {
+      @Override
       public void write(Shard key, Text value) throws IOException {
         assert (DONE.equals(value));
 
         String shardName = key.getDirectory();
         shardName = shardName.replace("/", "_");
 
-        Path doneFile =
-            new Path(perm, DONE + "_" + shardName);
+        Path doneFile = new Path(perm, DONE + "_" + shardName);
         if (!fs.exists(doneFile)) {
           fs.createNewFile(doneFile);
         }
       }
 
+      @Override
       public void close(final Reporter reporter) throws IOException {
       }
     };

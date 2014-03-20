@@ -6,18 +6,19 @@ import java.nio.MappedByteBuffer;
 
 import com.senseidb.indexing.activity.AtomicFieldUpdate;
 
-
 /**
  * Wraps an int array. Also provides the persistence support. The changes are kept accumulating in the batch.   
  *
  */
-public class ActivityIntValues extends ActivityPrimitiveValues  {
+public class ActivityIntValues extends ActivityPrimitiveValues {
   public int[] fieldValues;
-  
+
   public void init(int capacity) {
     fieldValues = new int[capacity];
   }
-  /* (non-Javadoc)
+
+  /*
+   * (non-Javadoc)
    * @see com.senseidb.indexing.activity.ActivityValues#update(int, java.lang.Object)
    */
   @Override
@@ -31,8 +32,9 @@ public class ActivityIntValues extends ActivityPrimitiveValues  {
   }
 
   protected ActivityIntValues() {
-    
+
   }
+
   public ActivityIntValues(int capacity) {
     init(capacity);
   }
@@ -47,7 +49,8 @@ public class ActivityIntValues extends ActivityPrimitiveValues  {
       return;
     }
     if (fieldValues.length - currentArraySize < 2) {
-      int newSize = fieldValues.length < 10000000 ? fieldValues.length * 2 : (int) (fieldValues.length * 1.5);
+      int newSize = fieldValues.length < 10000000 ? fieldValues.length * 2
+          : (int) (fieldValues.length * 1.5);
       int[] newFieldValues = new int[newSize];
       System.arraycopy(fieldValues, 0, newFieldValues, 0, fieldValues.length);
       this.fieldValues = newFieldValues;
@@ -81,8 +84,7 @@ public class ActivityIntValues extends ActivityPrimitiveValues  {
         fieldValues[index] = Integer.parseInt(valStr);
       }
     } else {
-      throw new UnsupportedOperationException(
-          "Only longs, ints and String are supported");
+      throw new UnsupportedOperationException("Only longs, ints and String are supported");
     }
   }
 
@@ -93,39 +95,44 @@ public class ActivityIntValues extends ActivityPrimitiveValues  {
   public void setFieldValues(int[] fieldValues) {
     this.fieldValues = fieldValues;
   }
-  @Override 
-  public void initFieldValues(int count, MappedByteBuffer  buffer) {
-     for (int i = 0; i < count; i++) {
-       int value;
-         value = buffer.getInt(i * 4);
-       fieldValues[i] = value;
-     }
-   }
-   @Override
-   public void initFieldValues(int count, RandomAccessFile storedFile) {
-     for (int i = 0; i < count; i++) {
-       int value;       
-         try {
-          storedFile.seek(i * 4);
-          value = storedFile.readInt();       
-          fieldValues[i] = value;
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-     }
-   }
-   @Override
-   public void delete(int index) {
-     fieldValues[index] = Integer.MIN_VALUE;
-     updateBatch.addFieldUpdate(AtomicFieldUpdate.valueOf(index, fieldValues[index]));     
-   }
+
+  @Override
+  public void initFieldValues(int count, MappedByteBuffer buffer) {
+    for (int i = 0; i < count; i++) {
+      int value;
+      value = buffer.getInt(i * 4);
+      fieldValues[i] = value;
+    }
+  }
+
+  @Override
+  public void initFieldValues(int count, RandomAccessFile storedFile) {
+    for (int i = 0; i < count; i++) {
+      int value;
+      try {
+        storedFile.seek(i * 4);
+        value = storedFile.readInt();
+        fieldValues[i] = value;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  @Override
+  public void delete(int index) {
+    fieldValues[index] = Integer.MIN_VALUE;
+    updateBatch.addFieldUpdate(AtomicFieldUpdate.valueOf(index, fieldValues[index]));
+  }
+
   @Override
   public int getFieldSizeInBytes() {
-    
+
     return 4;
   }
+
   @Override
-  public Number getValue(int index) {    
+  public Number getValue(int index) {
     return fieldValues[index];
   }
 }

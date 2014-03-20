@@ -1,37 +1,40 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	
+
 
 	<parent>
 		<groupId>com.senseidb</groupId>
 		<artifactId>sensei-parent</artifactId>
-		<version>1.6.1-SNAPSHOT</version>
+		<version>2.0.2-SNAPSHOT</version>
 		<relativePath>sensei-parent/pom.xml</relativePath>
 	</parent>
-	
+
 	<artifactId>sensei-project</artifactId>
 	<packaging>pom</packaging>
 	<name>sensei</name>
 	<description>sensei parent</description>
-	
-	<modules>
-    <module>sensei-parent</module>
-    <module>sensei-core</module>
-    <module>sensei-gateways</module>
-    <module>sensei-hadoop-indexing</module>
-    <module>sensei-federated-broker</module>
-    <!--<module>example</module>-->
-    <module>clients/java</module>
-   <module>sensei-war</module>   
-</modules>
 
+	<scm>
+		<connection>scm:git:git@github.com:senseidb/sensei.git</connection>
+		<developerConnection>scm:git:git@github.com:senseidb/sensei.git</developerConnection>
+		<url>http://github.com/senseidb/sensei</url>
+	</scm>
+
+	<modules>
+		<module>sensei-parent</module>
+		<module>sensei-core</module>
+		<module>sensei-gateways</module>
+		<module>sensei-hadoop-indexing</module>
+		<module>sensei-federated-broker</module>
+		<module>sensei-war</module>
+		<module>clients/java</module>
+	</modules>
 
 	<build>
 		<plugins>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>
-                <version>2.7</version>
+				<version>2.7</version>
 				<configuration>
 					<skip>true</skip> <!-- No need to deploy the reactor -->
 				</configuration>
@@ -54,6 +57,11 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.4.2</version>
 			</plugin>
 		</plugins>
 	</build>

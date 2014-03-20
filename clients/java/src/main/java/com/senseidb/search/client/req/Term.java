@@ -1,6 +1,5 @@
 package com.senseidb.search.client.req;
 
-import com.senseidb.search.client.req.query.Query;
 
 /**
  * <p>
@@ -9,8 +8,9 @@ import com.senseidb.search.client.req.query.Query;
  * following matches documents where the user field contains the term
  * <code>kimchy</code>:
  * </p>
- * 
+ *
  */
+@SuppressWarnings("unused")
 public class Term extends Selection {
   private String value;
   private double boost;

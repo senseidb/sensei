@@ -16,25 +16,30 @@ import com.senseidb.search.client.req.query.QueryJsonHandler;
  */
 @CustomJsonHandler(QueryJsonHandler.class)
 public class Ids extends Query implements Filter {
-    List<String> values;
-    List<String> excludes;
-    private double boost;
-    public Ids(List<String> values, List<String> excludes) {
-        super();
-        this.values = values;
-        this.excludes = excludes;
-    }
-    public Ids(List<String> values, List<String> excludes, double boost) {
-      super();
-      this.values = values;
-      this.excludes = excludes;
-      this.boost = boost;
+  List<String> values;
+  List<String> excludes;
+  @SuppressWarnings("unused")
+  private double boost;
+
+  public Ids(List<String> values, List<String> excludes) {
+    super();
+    this.values = values;
+    this.excludes = excludes;
   }
-    public List<String> getValues() {
-        return values;
-    }
-    public List<String> getExcludes() {
-        return excludes;
-    }
+
+  public Ids(List<String> values, List<String> excludes, double boost) {
+    super();
+    this.values = values;
+    this.excludes = excludes;
+    this.boost = boost;
+  }
+
+  public List<String> getValues() {
+    return values;
+  }
+
+  public List<String> getExcludes() {
+    return excludes;
+  }
 
 }

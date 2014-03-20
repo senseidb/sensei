@@ -15,10 +15,9 @@ public class ActivityRangeLongFilterIterator extends DocIdSetIterator {
   private final long start;
   private final long end;
   private final int arrLength;
-  private int[] indexes;
+  private final int[] indexes;
 
-  public ActivityRangeLongFilterIterator(long[] fieldValues, int[] indexes,
-          long start, long end) {
+  public ActivityRangeLongFilterIterator(long[] fieldValues, int[] indexes, long start, long end) {
     this.fieldValues = fieldValues;
     this.start = start;
     this.end = end;
@@ -26,27 +25,35 @@ public class ActivityRangeLongFilterIterator extends DocIdSetIterator {
     arrLength = indexes.length;
     _doc = -1;
   }
+
   @Override
   final public int docID() {
     return _doc;
   }
+
   @Override
-  public int nextDoc() throws IOException {  
-   while (++_doc < arrLength ) {
-     if (indexes[_doc] == -1) {
-       continue;
-     }
-     long value = fieldValues[indexes[_doc]];      
-     if (value >= start && value < end && value != Long.MIN_VALUE) {
-       return _doc;
-     }
-   }
-   return NO_MORE_DOCS;
+  public int nextDoc() throws IOException {
+    while (++_doc < arrLength) {
+      if (indexes[_doc] == -1) {
+        continue;
+      }
+      long value = fieldValues[indexes[_doc]];
+      if (value >= start && value < end && value != Long.MIN_VALUE) {
+        return _doc;
+      }
+    }
+    return NO_MORE_DOCS;
   }
 
   @Override
   public int advance(int id) throws IOException {
     _doc = id - 1;
     return nextDoc();
+  }
+
+  @Override
+  public long cost() {
+    // TODO Auto-generated method stub
+    return 0;
   }
 }

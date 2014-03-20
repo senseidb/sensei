@@ -1,6 +1,5 @@
 package com.senseidb.gateway.kafka.persistent;
 
-import java.text.DecimalFormat;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,22 +12,16 @@ import proj.zoie.api.DataConsumer.DataEvent;
 import com.senseidb.gateway.kafka.KafkaStreamDataProvider;
 import com.senseidb.util.Pair;
 
-public class PersistentDataProviderWrapper extends KafkaStreamDataProvider  {
+public class PersistentDataProviderWrapper extends KafkaStreamDataProvider {
   private static final Logger log = Logger.getLogger(PersistentDataProviderWrapper.class);
   private final PersistentCacheManager cacheManager;
-  private int batchSize;
-  private AtomicInteger atomicInteger = new AtomicInteger(0);
+  private final int batchSize;
+  private final AtomicInteger atomicInteger = new AtomicInteger(0);
   private final long startingOffset;
-  private ThreadLocal<DecimalFormat> formatter = new ThreadLocal<DecimalFormat>() {
-    protected DecimalFormat initialValue() {
-      return new DecimalFormat("00000000000000000000");
-    }
-  };
   private Iterator<Pair<String, String>> eventsFromPersistentCache;
   private final KafkaStreamDataProvider wrapped;
-  private Object _thread;
-
-  public PersistentDataProviderWrapper(KafkaStreamDataProvider wrapped, long startingOffset, int batchSize,  PersistentCacheManager cacheManager) {
+  public PersistentDataProviderWrapper(KafkaStreamDataProvider wrapped, long startingOffset,
+      int batchSize, PersistentCacheManager cacheManager) {
     this.wrapped = wrapped;
     this.startingOffset = startingOffset;
     this.cacheManager = cacheManager;
@@ -41,7 +34,7 @@ public class PersistentDataProviderWrapper extends KafkaStreamDataProvider  {
     List<Pair<String, String>> eventsNotAvailableInZoie = cacheManager
         .getEventsNotAvailableInZoie(wrapped.getStringVersionRepresentation(startingOffset));
     eventsFromPersistentCache = eventsNotAvailableInZoie.iterator();
-    
+
   }
 
   @Override
@@ -66,23 +59,25 @@ public class PersistentDataProviderWrapper extends KafkaStreamDataProvider  {
       return null;
     }
   }
-  
+
   @Override
   public void stop() {
     wrapped.stop();
   }
+
   @Override
   public void setBatchSize(int batchSize) {
     wrapped.setBatchSize(batchSize);
   }
- 
+
   @Override
   public void setMaxEventsPerMinute(long maxEventsPerMinute) {
     wrapped.setMaxEventsPerMinute(maxEventsPerMinute);
   }
+
   @Override
   public void setRetryTime(int retryTime) {
     wrapped.setRetryTime(retryTime);
   }
- 
+
 }

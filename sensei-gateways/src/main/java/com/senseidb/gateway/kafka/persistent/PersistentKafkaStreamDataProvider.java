@@ -16,7 +16,7 @@ import com.senseidb.gateway.kafka.KafkaStreamDataProvider;
 import com.senseidb.indexing.DataSourceFilter;
 import com.senseidb.util.Pair;
 
-public class PersistentKafkaStreamDataProvider extends KafkaStreamDataProvider  {
+public class PersistentKafkaStreamDataProvider extends KafkaStreamDataProvider {
   private static final Logger log = Logger.getLogger(PersistentKafkaStreamDataProvider.class);
   private final PersistentCacheManager cacheManager;
   private int batchSize;
@@ -24,11 +24,13 @@ public class PersistentKafkaStreamDataProvider extends KafkaStreamDataProvider  
   private final long startingOffset;
   private AtomicLong versionCounter = new AtomicLong();
   private volatile Iterator<Pair<String, String>> eventsFromPersistentCache;
-  
-  
-  public PersistentKafkaStreamDataProvider(Comparator<String> versionComparator,String zookeeperUrl,int soTimeout,int batchSize,
-      String consumerGroupId,String topic,long startingOffset,DataSourceFilter<DataPacket> dataConverter, PersistentCacheManager cacheManager) {
-    super(versionComparator, zookeeperUrl, soTimeout, batchSize, consumerGroupId, topic, startingOffset, dataConverter);
+
+  public PersistentKafkaStreamDataProvider(Comparator<String> versionComparator,
+      String zookeeperUrl, int soTimeout, int batchSize, String consumerGroupId, String topic,
+      long startingOffset, DataSourceFilter<DataPacket> dataConverter,
+      PersistentCacheManager cacheManager) {
+    super(versionComparator, zookeeperUrl, soTimeout, batchSize, consumerGroupId, topic,
+        startingOffset, dataConverter);
     this.startingOffset = startingOffset;
     versionCounter.set(startingOffset);
     this.cacheManager = cacheManager;
@@ -65,10 +67,10 @@ public class PersistentKafkaStreamDataProvider extends KafkaStreamDataProvider  
       return null;
     }
   }
+
   @Override
   public long getNextVersion() {
     return versionCounter.incrementAndGet();
   }
 
- 
 }

@@ -15,5 +15,5 @@ public class IsNull implements Filter {
   public void setField(String field) {
     this.field = field;
   }
-  
-} 
+
+}

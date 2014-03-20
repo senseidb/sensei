@@ -19,6 +19,7 @@
 package com.senseidb.indexing.hadoop.reduce;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -29,11 +30,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.lucene.store.BufferedIndexInput;
 import org.apache.lucene.store.BufferedIndexOutput;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.Lock;
-
-import com.senseidb.indexing.hadoop.util.LuceneIndexFileNameFilter;
 
 /**
  * This class implements a Lucene Directory on top of a general FileSystem.
@@ -53,8 +53,8 @@ public class FileSystemDirectory extends Directory {
    * @param conf
    * @throws IOException
    */
-  public FileSystemDirectory(FileSystem fs, Path directory, boolean create,
-      Configuration conf) throws IOException {
+  public FileSystemDirectory(FileSystem fs, Path directory, boolean create, Configuration conf)
+      throws IOException {
 
     this.fs = fs;
     this.directory = directory;
@@ -97,22 +97,21 @@ public class FileSystemDirectory extends Directory {
     }
 
     // clear old index files
-    FileStatus[] fileStatus =
-        fs.listStatus(directory, LuceneIndexFileNameFilter.getFilter());
+    FileStatus[] fileStatus = fs.listStatus(directory);
     for (int i = 0; i < fileStatus.length; i++) {
       if (!fs.delete(fileStatus[i].getPath(), true)) {
-        throw new IOException("Cannot delete index file "
-            + fileStatus[i].getPath());
+        throw new IOException("Cannot delete index file " + fileStatus[i].getPath());
       }
     }
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#list()
    */
+  @Override
   public String[] listAll() throws IOException {
-    FileStatus[] fileStatus =
-        fs.listStatus(directory, LuceneIndexFileNameFilter.getFilter());
+    FileStatus[] fileStatus = fs.listStatus(directory);
     String[] result = new String[fileStatus.length];
     for (int i = 0; i < fileStatus.length; i++) {
       result[i] = fileStatus[i].getPath().getName();
@@ -120,51 +119,61 @@ public class FileSystemDirectory extends Directory {
     return result;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#fileExists(java.lang.String)
    */
+  @Override
   public boolean fileExists(String name) throws IOException {
     return fs.exists(new Path(directory, name));
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#fileModified(java.lang.String)
    */
   public long fileModified(String name) {
     throw new UnsupportedOperationException();
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#touchFile(java.lang.String)
    */
   public void touchFile(String name) {
     throw new UnsupportedOperationException();
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#fileLength(java.lang.String)
    */
+  @Override
   public long fileLength(String name) throws IOException {
     return fs.getFileStatus(new Path(directory, name)).getLen();
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#deleteFile(java.lang.String)
    */
+  @Override
   public void deleteFile(String name) throws IOException {
     if (!fs.delete(new Path(directory, name), true)) {
       throw new IOException("Cannot delete index file " + name);
     }
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#renameFile(java.lang.String, java.lang.String)
    */
   public void renameFile(String from, String to) throws IOException {
     fs.rename(new Path(directory, from), new Path(directory, to));
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#createOutput(java.lang.String)
    */
   public IndexOutput createOutput(String name) throws IOException {
@@ -177,52 +186,64 @@ public class FileSystemDirectory extends Directory {
     return new FileSystemIndexOutput(file, ioFileBufferSize);
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#openInput(java.lang.String)
    */
   public IndexInput openInput(String name) throws IOException {
     return openInput(name, ioFileBufferSize);
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#openInput(java.lang.String, int)
    */
   public IndexInput openInput(String name, int bufferSize) throws IOException {
     return new FileSystemIndexInput(new Path(directory, name), bufferSize);
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#makeLock(java.lang.String)
    */
+  @Override
   public Lock makeLock(final String name) {
     return new Lock() {
+      @Override
       public boolean obtain() {
         return true;
       }
 
+      @Override
       public void release() {
       }
 
+      @Override
       public boolean isLocked() {
         throw new UnsupportedOperationException();
       }
 
+      @Override
       public String toString() {
         return "Lock@" + new Path(directory, name);
       }
     };
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see org.apache.lucene.store.Directory#close()
    */
+  @Override
   public void close() throws IOException {
     // do not close the file system
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
    * @see java.lang.Object#toString()
    */
+  @Override
   public String toString() {
     return this.getClass().getName() + "@" + directory;
   }
@@ -245,16 +266,16 @@ public class FileSystemDirectory extends Directory {
     private boolean isOpen;
     private boolean isClone;
 
-    public FileSystemIndexInput(Path path, int ioFileBufferSize)
-        throws IOException {
+    public FileSystemIndexInput(Path path, int ioFileBufferSize) throws IOException {
+      super(path.toString());
       filePath = path;
       descriptor = new Descriptor(path, ioFileBufferSize);
       length = fs.getFileStatus(path).getLen();
       isOpen = true;
     }
 
-    protected void readInternal(byte[] b, int offset, int len)
-        throws IOException {
+    @Override
+    protected void readInternal(byte[] b, int offset, int len) throws IOException {
       synchronized (descriptor) {
         long position = getFilePointer();
         if (position != descriptor.position) {
@@ -273,6 +294,7 @@ public class FileSystemDirectory extends Directory {
       }
     }
 
+    @Override
     public void close() throws IOException {
       if (!isClone) {
         if (isOpen) {
@@ -284,21 +306,25 @@ public class FileSystemDirectory extends Directory {
       }
     }
 
+    @Override
     protected void seekInternal(long position) {
       // handled in readInternal()
     }
 
+    @Override
     public long length() {
       return length;
     }
 
+    @Override
     protected void finalize() throws IOException {
       if (!isClone && isOpen) {
         close(); // close the file
       }
     }
 
-    public Object clone() {
+    @Override
+    public BufferedIndexInput clone() {
       FileSystemIndexInput clone = (FileSystemIndexInput) super.clone();
       clone.isClone = true;
       return clone;
@@ -311,18 +337,19 @@ public class FileSystemDirectory extends Directory {
     private final FSDataOutputStream out;
     private boolean isOpen;
 
-    public FileSystemIndexOutput(Path path, int ioFileBufferSize)
-        throws IOException {
+    public FileSystemIndexOutput(Path path, int ioFileBufferSize) throws IOException {
       filePath = path;
       // overwrite is true by default
       out = fs.create(path, true, ioFileBufferSize);
       isOpen = true;
     }
 
+    @Override
     public void flushBuffer(byte[] b, int offset, int size) throws IOException {
       out.write(b, offset, size);
     }
 
+    @Override
     public void close() throws IOException {
       if (isOpen) {
         super.close();
@@ -333,19 +360,40 @@ public class FileSystemDirectory extends Directory {
       }
     }
 
+    @Override
     public void seek(long pos) throws IOException {
       throw new UnsupportedOperationException();
     }
 
+    @Override
     public long length() throws IOException {
       return out.getPos();
     }
 
+    @Override
     protected void finalize() throws IOException {
       if (isOpen) {
         close(); // close the file
       }
     }
+  }
+
+  @Override
+  public IndexOutput createOutput(String name, IOContext context) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void sync(Collection<String> names) throws IOException {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public IndexInput openInput(String name, IOContext context) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

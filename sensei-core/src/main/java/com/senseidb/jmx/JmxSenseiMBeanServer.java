@@ -18,11 +18,12 @@ import org.apache.log4j.Logger;
 import com.sun.jmx.mbeanserver.SunJmxMBeanServer;
 
 /**
- * Registers a custom platformMBeanServer, that is tolerable to registering severl MBeans with the same name. Instead of throwing the InstanceAlreadyExistsException 
+ * Registers a custom platformMBeanServer, that is tolerable to registering severl MBeans with the same name. Instead of throwing the InstanceAlreadyExistsException
  * it will try to add the numeric suffix to the ObjectName prior to registration
  * @author vzhabiuk
  *
  */
+@SuppressWarnings("restriction")
 public class JmxSenseiMBeanServer {
   private static Logger logger = Logger.getLogger(JmxSenseiMBeanServer.class);
   private static boolean registered = false;
@@ -31,12 +32,12 @@ public class JmxSenseiMBeanServer {
     try {
       if (!registered) {
         MBeanServer platformMBeanServer = ManagementFactory.getPlatformMBeanServer();
-
-        Field platformMBeanServerField = ManagementFactory.class.getDeclaredField("platformMBeanServer");
+        Field platformMBeanServerField = ManagementFactory.class
+            .getDeclaredField("platformMBeanServer");
         platformMBeanServerField.setAccessible(true);
-        Object modifiedMbeanServer = Proxy.newProxyInstance(platformMBeanServer.getClass().getClassLoader(),
-            new Class[] { MBeanServer.class, SunJmxMBeanServer.class }, new MBeanServerInvocationHandler(
-                platformMBeanServer));
+        Object modifiedMbeanServer = Proxy.newProxyInstance(platformMBeanServer.getClass()
+            .getClassLoader(), new Class[] { MBeanServer.class, SunJmxMBeanServer.class },
+          new MBeanServerInvocationHandler(platformMBeanServer));
         platformMBeanServerField.set(null, modifiedMbeanServer);
         registered = true;
       }
@@ -52,33 +53,39 @@ public class JmxSenseiMBeanServer {
       this.mBeanServer = underlying;
     }
 
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-      if (!method.getName().equals("registerMBean")) {        
+      if (!method.getName().equals("registerMBean")) {
         if (method.getName().equals("unregisterMBean")) {
           return handleBeanUnregister(method, args);
         } else {
           return method.invoke(mBeanServer, args);
         }
-        
+
       }
       ObjectName objectName = (ObjectName) args[1];
       String canonicalName = objectName.getCanonicalName();
-      if (!canonicalName.contains(".sensei") && !canonicalName.contains(".linkedin") && !canonicalName.contains(".zoie") && !canonicalName.contains(".bobo")) {
+      if (!canonicalName.contains(".sensei") && !canonicalName.contains(".linkedin")
+          && !canonicalName.contains(".zoie") && !canonicalName.contains(".bobo")) {
         return method.invoke(mBeanServer, args);
       }
       for (int i = 0; i < 200; i++) {
         if (!mBeanServer.isRegistered(objectName)) {
           break;
         }
-        logger.warn("The JMX bean with name [" + canonicalName + "] is already registered. Trying to add a numeric suffix to register the another one");
+        logger
+            .warn("The JMX bean with name ["
+                + canonicalName
+                + "] is already registered. Trying to add a numeric suffix to register the another one");
         objectName = new ObjectName(canonicalName + i);
       }
       args[1] = objectName;
       return method.invoke(mBeanServer, args);
     }
 
-    public Object handleBeanUnregister(Method method, Object[] args) throws IllegalAccessException, InvocationTargetException,
-        MalformedObjectNameException, MBeanRegistrationException, InstanceNotFoundException {
+    public Object handleBeanUnregister(Method method, Object[] args) throws IllegalAccessException,
+        InvocationTargetException, MalformedObjectNameException, MBeanRegistrationException,
+        InstanceNotFoundException {
       ObjectName objectName = (ObjectName) args[0];
       if (mBeanServer.isRegistered(objectName)) {
         return method.invoke(mBeanServer, args);
@@ -90,11 +97,11 @@ public class JmxSenseiMBeanServer {
         }
         ObjectName currentObjectName = new ObjectName(objectName.getCanonicalName() + i);
         if (mBeanServer.isRegistered(currentObjectName)) {
-           if (ret == null) {
-             ret = method.invoke(mBeanServer, new Object[] {currentObjectName});
-           } else {
-             mBeanServer.unregisterMBean(currentObjectName);
-           }
+          if (ret == null) {
+            ret = method.invoke(mBeanServer, new Object[] { currentObjectName });
+          } else {
+            mBeanServer.unregisterMBean(currentObjectName);
+          }
         } else {
           break;
         }
