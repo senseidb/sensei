@@ -158,6 +158,7 @@ public class SenseiCore {
       logger.info("index manager started...");
     } catch (Exception e) {
       logger.error("Unable to start indexing manager, indexing not started...", e);
+      throw e;
     }
     _started = true;
   }
