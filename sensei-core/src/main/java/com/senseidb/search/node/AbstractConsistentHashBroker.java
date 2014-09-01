@@ -1,5 +1,6 @@
 package com.senseidb.search.node;
 
+import com.google.common.collect.Sets;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -229,7 +230,14 @@ public abstract class AbstractConsistentHashBroker<REQUEST extends AbstractSense
 
   @SuppressWarnings("unchecked")
   protected List<RESULT> doCall(REQUEST req) {
-    Set<Integer> shards = router.getShards();
+    Set<Integer> allShards = router.getShards();
+    
+    Set<Integer> shards = req.getPartitions();
+    if (shards == null || shards.isEmpty()) {
+      shards = allShards;
+    } else {
+      shards = Sets.intersection(allShards, shards);
+    }
 
     Map<Service<REQUEST, RESULT>, REQUEST> serviceToRequest = new HashMap<Service<REQUEST, RESULT>, REQUEST>();
 
